@@ -3,12 +3,19 @@ import { createGame, step, shoot, attack, setMoveTarget, chooseWeather, WEATHER_
 const musicSource = document.querySelector('#music-source');
 const musicNote = document.querySelector('#music-note');
 const musicTrack = new Audio(); musicTrack.loop = true; musicTrack.volume = 0.35;
-let musicURL = '';
+const battleRecording = './assets/music/battle-theme.mp3';
+let musicURL = '', musicPaused = false;
+const originalRecordings = {
+  preview: { id: '1595450868', title: '梦比优斯主题曲', artist: 'Project DMM & ウルトラ防衛隊' },
+  crew: { id: '1595450869', title: 'Run through! · CREW GUYS 出击', artist: 'Project DMM & TMC' },
+  heroes: { id: '1595450875', title: 'HEROES!', artist: 'Project DMM' }
+};
 function loadThemePreview() {
-  if (musicSource.value !== 'preview' || document.querySelector('#theme-player iframe')) return;
+  const recording = originalRecordings[musicSource.value];
+  if (!recording || !audio.enabled || document.hidden || !document.querySelector('.music-options').open || document.querySelector('#theme-player iframe')) return;
   const frame = document.createElement('iframe');
-  frame.src = 'https://embed.music.apple.com/jp/album/1595450867?i=1595450868';
-  frame.title = '梦比优斯主题曲 · Apple Music 官方90秒试听';
+  frame.src = 'https://embed.music.apple.com/jp/album/1595450867?i=' + recording.id;
+  frame.title = recording.title + ' · Apple Music 官方原声试听';
   frame.allow = 'autoplay; encrypted-media'; frame.height = '175';
   document.querySelector('#theme-player').append(frame);
 }
@@ -41,9 +48,13 @@ const audio = {
         };
       }
       await this.context.resume();
-      if (!this.enabled || document.hidden) return;
+      if (!this.enabled || document.hidden) { this.pause(); return; }
       this.error = false; this.master.gain.value = 0.2;
-      if (musicSource.value === 'file' && musicURL) await musicTrack.play();
+      if (!musicPaused && (musicSource.value === 'battle' || (musicSource.value === 'file' && musicURL))) {
+        const source = musicSource.value === 'battle' ? battleRecording : musicURL;
+        if (musicTrack.getAttribute('src') !== source) musicTrack.src = source;
+        await musicTrack.play();
+      }
       if (!this.enabled || document.hidden) { this.stop(); return; }
       if (this.context.state === 'running' && this.timer === null && ['original','book'].includes(musicSource.value)) {
         this.next = this.context.currentTime + 0.04; this.beat = 0;
@@ -120,22 +131,43 @@ function updateSoundButton() {
   soundButton.setAttribute('aria-pressed', String(playing));
   soundButton.setAttribute('aria-label', playing ? '关闭音乐和音效' : '开启音乐和音效');
   soundButton.querySelector('span').textContent = audio.error ? '♫ 点击重试声音' : playing ? '♫ 声音：开' : audio.enabled ? '♫ 开启声音' : '♫ 声音：关';
-  soundButton.querySelector('small').textContent = musicSource.value === 'book' ? '书本穿越记 · 器乐' : musicSource.value === 'original' ? '原创备用配乐' : musicSource.value === 'preview' ? '音效 / 官方试听' : musicURL ? '已选本地音频' : '音效 / 等待本地音频';
+  soundButton.querySelector('small').textContent = musicSource.value === 'battle' ? '热血摇滚 · 循环' : musicSource.value === 'book' ? '书本穿越记 · 器乐' : musicSource.value === 'original' ? '原创备用配乐' : originalRecordings[musicSource.value] ? '音效 / 原声试听' : musicURL ? '本地原声 · 循环' : '音效 / 等待音频';
+  const toggle = document.querySelector('#music-toggle');
+  if (toggle) {
+    toggle.hidden = !['battle','file'].includes(musicSource.value); toggle.disabled = musicSource.value === 'file' && !musicURL;
+    toggle.textContent = musicTrack.paused ? '播放配乐' : '暂停配乐';
+    toggle.setAttribute('aria-pressed', String(!musicTrack.paused));
+  }
+  const volume = document.querySelector('.music-volume');
+  if (volume) volume.hidden = !['battle','file'].includes(musicSource.value);
+  const credit = document.querySelector('#music-credit'), recording = originalRecordings[musicSource.value];
+  if (credit) credit.textContent = musicSource.value === 'battle' ? 'JRPG Epic Rock Battle Theme #1 · HydroGene · 完整摇滚录音' : recording ? recording.title + ' · ' + recording.artist + ' · 官方原声' : musicSource.value === 'file' ? '导入你已有的原声音频，完整循环，文件仅留在本机。' : '原创合成器乐 · 非影视原声';
+  document.querySelector('#preview-note').hidden = !recording;
+  document.querySelector('#official-music-link').hidden = !recording;
+  document.querySelector('#battle-credit-link').hidden = musicSource.value !== 'battle';
 }
 soundButton.addEventListener('click', () => {
   if (audio.enabled && audio.context?.state === 'running') {
     audio.enabled = false; audio.pause();
-  } else { audio.enabled = true; void audio.resume(); }
+  } else { audio.enabled = true; void audio.resume(); loadThemePreview(); }
 });
-musicSource.addEventListener('change', () => { audio.stop(); void audio.resume(); if (audio.enabled) loadThemePreview(); });
+musicSource.addEventListener('change', () => { audio.stop(); musicPaused = false; void audio.resume(); loadThemePreview(); updateSoundButton(); });
 document.querySelector('#music-settings').addEventListener('click', () => {
   const settings = document.querySelector('.music-options'); settings.open = true;
   audio.enabled = true; void audio.resume(); loadThemePreview();
   settings.scrollIntoView({ block: 'nearest' }); musicSource.focus({ preventScroll: true });
 });
+window.addEventListener('game-enter', () => { void audio.resume(); });
+document.querySelector('#music-toggle')?.addEventListener('click', () => {
+  if (musicSource.value === 'file' && !musicURL) return;
+  musicPaused = !musicTrack.paused;
+  if (musicPaused) musicTrack.pause();
+  else { audio.enabled = true; void audio.resume(); }
+  updateSoundButton();
+});
+document.querySelector('#music-volume')?.addEventListener('input', event => { musicTrack.volume = Number(event.target.value) / 100; });
 document.querySelector('.music-options').addEventListener('toggle', event => {
   if (event.target.open) { if (audio.enabled) loadThemePreview(); }
-  else document.querySelector('#theme-player').replaceChildren();
 });
 document.querySelector('#music-file').addEventListener('change', event => {
   const file = event.target.files[0];
@@ -143,7 +175,7 @@ document.querySelector('#music-file').addEventListener('change', event => {
   if (!file.type.startsWith('audio/') && !/\.(mp3|m4a|wav|ogg)$/i.test(file.name)) {
     musicNote.textContent = '请选择 MP3、M4A、WAV 或 OGG 音频文件。'; return;
   }
-  audio.stop(); if (musicURL) URL.revokeObjectURL(musicURL);
+  audio.stop(); musicPaused = false; audio.enabled = true; if (musicURL) URL.revokeObjectURL(musicURL);
   musicURL = URL.createObjectURL(file); musicTrack.src = musicURL; musicSource.value = 'file';
   musicNote.textContent = '已选择：' + file.name + '（仅本机播放）'; void audio.resume();
 });
@@ -151,6 +183,9 @@ musicTrack.addEventListener('error', () => {
   musicNote.textContent = '该音频无法解码，请换用可播放的 MP3、M4A、WAV 或 OGG 文件。';
   audio.error = true; updateSoundButton();
 });
+musicTrack.addEventListener('playing', updateSoundButton);
+musicTrack.addEventListener('pause', updateSoundButton);
+updateSoundButton();
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) audio.pause();
   else if (audio.context && audio.enabled) void audio.resume();
@@ -272,20 +307,125 @@ box(920, 450, 70, 12, '#de9b70', 4, ink);
 label('小小街角 · 大大勇气', 542, 568, 12, '#927c57', 500);
 c = ctx;
 
+function metalSurface(x1, y1, x2, y2, dark, light, middle) {
+  const material = c.createLinearGradient(x1, y1, x2, y2);
+  material.addColorStop(0, dark); material.addColorStop(.26, middle);
+  material.addColorStop(.46, light); material.addColorStop(.57, middle); material.addColorStop(1, dark);
+  return material;
+}
+function heroSuitFinish(character, time) {
+  const id = character.id, walking = character.moving ? Math.sin(time * 15) * 7 : 0;
+  const rim = '#f4fcffbb', shade = '#13283d66';
+  for (const side of [-1, 1]) {
+    line([[side*21,-67],[side*17,-54],[side*14,-44]],shade,2);
+    line([[side*16,-64],[side*12,-53]],rim,1);
+    if (!(side === 1 && character.action === 'kick')) {
+      line([[side*13,-39],[side*15+side*walking,-28]],'#ffffff66',2);
+      line([[side*17+side*walking,-22],[side*18+side*walking,-12]],shade,2);
+      line([[side*19+side*walking-8,-7],[side*19+side*walking+6,-7]],'#ffffff88',1);
+    }
+  }
+  if (id === 'zero' || id === 'seven' || id === 'taro') {
+    for (const side of [-1,1]) for (let row=0;row<2;row++) for(let j=0;j<3;j++) {
+      box(side*(12+j*4)-1.5,-85+row*5,3,2,'#314453',.5);
+      line([[side*(12+j*4)-1,-86+row*5],[side*(12+j*4)+1,-86+row*5]],rim,.7);
+    }
+  }
+  if(id==='nexus')for(let y=-67;y<-59;y+=2)line([[-17,y],[-9,y+1]],'#d2e4ed',.8);
+  if(id==='noa')for(const side of [-1,1])line([[side*36,-102],[side*43,-145],[side*45,-187]],'#f4ffff',1.5);
+  const faceY = ['mebius','noa','taro','tregear','zhuqingqing','jiangshuyan','choumo'].includes(id) ? -113 : -101;
+  line([[-11,faceY],[-6,faceY+5],[-4,faceY+8]],'#526c7a',1);
+  line([[11,faceY],[6,faceY+5],[4,faceY+8]],'#f5ffffbb',1);
+  if(id==='tregear')for(const side of [-1,1])line([[side*16,-90],[side*8,-82]],'#fff0c8',1.2);
+}
+function monsterSurfaceDetails(id) {
+  const edge='#d2e0e6', dark='#192431', gold='#e9c78a';
+  if(id==='empera') {
+    for(const side of [-1,1]) {
+      poly([[side*21,-111],[side*38,-119],[side*31,-99],[side*20,-91]],'#777b91',dark);
+      for(let y=-94;y<-53;y+=10)poly([[side*3,y],[side*22,y-7],[side*19,y],[side*4,y+5]],'#3c4155','#70768c');
+      poly([[side*11,-47],[side*23,-52],[side*21,-13],[side*12,-9]],'#4b5268',dark);
+      line([[side*17,-43],[side*17,-18]],'#a1a5b4',1.5);
+      line([[side*30,-91],[side*39,-70],[side*34,-53]],'#a6a5b6',1.5);
+      for(let j=0;j<3;j++)line([[side*(30+j*4),-52],[side*(28+j*4),-43]],'#9c9ca9',1.5);
+    }
+    poly([[-18,-52],[0,-45],[18,-52],[16,-40],[0,-32],[-16,-40]],'#5d627a',dark);
+    line([[-12,-137],[0,-148],[12,-137]],edge,1);
+  } else if(id==='belial') {
+    for(const side of [-1,1]) {
+      line([[side*23,-99],[side*16,-85],[side*6,-77]],'#ff6b65',1.5);
+      line([[side*23,-53],[side*22,-28]],'#7b303b',2);
+      for(let j=0;j<3;j++)poly([[side*(30+j*5),-54],[side*(31+j*5),-47],[side*(28+j*5),-36],[side*(26+j*5),-46]],'#a7b6bb',dark);
+    }
+    poly([[-13,-118],[0,-115],[13,-118],[8,-111],[-8,-111]],'#09131c');
+    for(let x=-8;x<=8;x+=4)poly([[x,-117],[x+3,-117],[x+1,-113]],'#c9d6da');
+    for(let y=-155;y<-129;y+=7)for(let x=42;x<55;x+=6)box(x,y,3,4,'#b390a6',.5);
+    line([[48,-125],[45,-54]],'#a6b8c6',1);
+  } else if(id==='gomora'||id==='tyrant') {
+    for(let y=-89;y<-24;y+=9)for(let x=-24;x<=23;x+=8) {
+      if(Math.abs(x)>29-Math.abs(y+57)*.15)continue;
+      poly([[x,y],[x+3,y-3],[x+6,y],[x+3,y+3]],id==='gomora'?'#a98759':'#758c8a');
+      line([[x,y],[x+3,y-3]],id==='gomora'?'#e3c28d':'#b6c8bb',1);
+    }
+    oval(0,-108,16,10,id==='gomora'?'#99764e':'#687c79',dark);
+    poly([[-14,-111],[0,-108],[14,-111],[10,-102],[-10,-102]],'#293133');
+    for(let x=-10;x<=10;x+=5)poly([[x,-110],[x+3,-109],[x+1,-105]],'#f4e9c9');
+    for(const side of [-1,1]) {
+      line([[side*4,-124],[side*18,-127]],'#493d31',3);
+      for(let j=0;j<3;j++)poly([[side*(10+j*6),-6],[side*(13+j*6),-12],[side*(16+j*6),-5]],'#e1d2ae',dark);
+    }
+    if(id==='gomora')for(const side of [-1,1]) {
+      poly([[side*16,-136],[side*31,-143],[side*47,-157],[side*42,-136],[side*28,-124]],gold,dark);
+      line([[side*25,-135],[side*39,-145]],'#fff1c4',1.5);
+    }
+  } else if(id==='baltan') {
+    for(const side of [-1,1]) {
+      for(let y=-44;y<-12;y+=6)line([[side*9,y],[side*24,y]],'#d4e4df',1.5);
+      for(let y=-134;y<-120;y+=4)for(let x=7;x<=14;x+=3)oval(side*x,y,1,1,'#b26c39');
+      poly([[side*39,-79],[side*55,-85],[side*65,-128],[side*51,-108],[side*44,-141],[side*35,-111]],'#a6c7ce',dark);
+      line([[side*42,-102],[side*47,-89],[side*56,-114]],'#edf7ec',1.5);
+    }
+    for(let y=-103;y<-55;y+=6)line([[-9,y],[0,y+3],[9,y]],'#4b606f',1);
+  } else if(id==='zetton') {
+    for(const side of [-1,1]) {
+      for(let y=-106;y<-67;y+=6)line([[side*26,y],[side*34,y+3]],'#c5d4d8',2);
+      for(let y=-104;y<-77;y+=6)oval(side*14,y,3,2,'#ffe0a0');
+      line([[side*19,-151],[side*25,-168]],'#f3e9d3',1.5);
+    }
+    for(let y=-145;y<-118;y+=6)oval(0,y,2.5,2,'#ffebaa');
+  } else if(id==='kingjoe') {
+    for(const side of [-1,1]) {
+      for(const y of [-105,-57])oval(side*23,y,2,2,'#fff0b9',dark);
+      oval(side*19,-39,10,8,'#8f875d',dark);oval(side*19,-39,5,5,gold);
+      line([[side*15,-28],[side*15,-14]],'#fff0bd',2);
+      line([[side*33,-115],[side*33,-103]],'#fff2c2',1.5);
+    }
+    poly([[-7,-65],[7,-65],[10,-55],[0,-49],[-10,-55]],'#77785a',dark);
+    line([[-20,-138],[20,-138]],'#fff0c2',1.5);
+  } else if(id==='bemstar') {
+    for(const side of [-1,1]) {
+      for(let j=0;j<4;j++)line([[side*(29+j*6),-87+j*11],[side*(35+j*6),-50+j*9]],'#a4b1a0',1.5);
+      line([[side*4,-122],[side*19,-125]],dark,3);
+      for(let j=0;j<3;j++)poly([[side*(8+j*7),-7],[side*(11+j*7),-15],[side*(15+j*7),-6]],gold,dark);
+    }
+    poly([[-10,-101],[0,-105],[11,-101],[0,-94]],'#ffe4a1',dark);
+    for(let r=0;r<3;r++)line([[-17+r*4,-62],[0,-79+r*7],[17-r*4,-62]],'#87967c',1);
+  }
+}
 export function hero(character, time, context = ctx) {
   const previousContext = c; c = context;
+  const ink = '#24323e';
   c.save(); c.translate(character.x, 512); c.scale(character.dir, 1);
   const id = character.id || 'ruebe';
   const isRuebe = id === 'ruebe';
   if (id === 'seven') c.scale(0.94, 1.04);
-  const red = '#c94b43';
-  const suit = id === 'zero' ? '#4175a3' : id === 'seven' ? red : '#303e3d';
-  const silver = c.createLinearGradient(-28, 0, 29, 0);
-  silver.addColorStop(0, '#a7bbba'); silver.addColorStop(0.48, '#f3f3e9'); silver.addColorStop(1, '#b7c9c6');
-  const gold = c.createLinearGradient(-26, -145, 30, -65);
-  gold.addColorStop(0, '#c38a36'); gold.addColorStop(0.45, '#ffe3a0'); gold.addColorStop(1, '#d4a04d');
+  const red = metalSurface(-30,-90,35,-50,'#851f31','#f77e78','#cc334c');
+  const suit = id === 'zero' ? metalSurface(-28,-90,32,-40,'#183d70','#4c9dc9','#27649b') : id === 'seven' ? red : '#202c39';
+  const silver = metalSurface(-30,-80,32,-65,'#687e96','#f5fbff','#b6c9d8');
+  const gold = metalSurface(-30,-145,35,-65,'#926020','#fff0b0','#d6a84e');
   const walking = character.moving ? Math.sin(time * 15) * 7 : 0;
   oval(0, 3, 38, 9, '#6d755b33');
+  c.scale(.84,1.12);
   if (character.invincible > 0) { oval(0, -55, 43, 73, '#b9f6e555', '#97cebd'); }
   if(isRuebe&&character.action==='punch'){
     poly([[80,-68],[84,-104],[128,-157],[111,-93],[91,-63]],'#f2a04f',ink);
@@ -330,6 +470,7 @@ export function hero(character, time, context = ctx) {
     const arm=character.action==='punch'?[[23,-88],[57,-76],[92,-76]]:character.firing>0||character.action==='weapon'?[[23,-88],[34,-65],[49,-65]]:[[23,-88],[33,-65],[42,-76]];
     line(arm,ink,18);line(arm,armor,13);const fist=arm[2];oval(fist[0]+4,fist[1],9,8,silver,ink);
     if(!noa)box(-35,-59,13,7,'#d7c79c',2,ink);if(character.firing>0)oval(55,-65,11,9,'#c8faec');
+    c.save();c.translate(0,-98);c.scale(.86,.87);c.translate(0,98);
     poly([[-23,-135],[-12,-149],[0,-153],[13,-149],[24,-135],[22,-117],[12,-102],[0,-97],[-12,-102],[-22,-117]],silver,ink);
     if(noa) {
       poly([[-5,-145],[0,-168],[7,-152],[5,-126],[-3,-126]],silver,ink);
@@ -341,6 +482,7 @@ export function hero(character, time, context = ctx) {
       line([[-22,-116],[-14,-106]],red,3);line([[22,-116],[14,-106]],red,3);
     }
     poly([[-8,-108],[0,-106],[8,-108],[4,-101],[-4,-101]],'#8b9f9e');line([[-6,-106],[6,-106]],'#f2f5ea',2);
+    c.restore();heroSuitFinish(character,time);
     c.restore();c=previousContext;return;
   }
   if (['tregear','zhuqingqing','jiangshuyan','choumo'].includes(id)) {
@@ -370,6 +512,7 @@ export function hero(character, time, context = ctx) {
     const arm = action==='punch' ? [[22,-82],[57,-74],[92,-74]] : action==='bug' ? [[22,-82],[35,-112],[20,-144]] : action==='delay' ? [[22,-82],[38,-96],[37,-117]] : character.firing>0||action==='weapon'||action==='slime' ? [[22,-82],[34,-65],[49,-65]] : [[22,-82],[32,-62],[41,-73]];
     line(arm,ink,18);line(arm,base,13);const fist=arm[2];oval(fist[0]+4,fist[1],9,8,tregear?'#2e3540':silver,ink);
     box(-36,-60,13,7,tregear?'#c4a16d':silver,2);if(character.firing>0)oval(55,-65,11,9,'#c8faec');
+    c.save();c.translate(0,-94);c.scale(.86,.87);c.translate(0,94);
     poly([[-24,-132],[-13,-147],[0,-151],[14,-146],[24,-131],[23,-113],[12,-98],[0,-92],[-13,-99],[-23,-114]],silver,ink);
     if (tregear) {
       poly([[-5,-145],[0,-173],[6,-149],[4,-120],[-3,-120]],silver,ink);
@@ -389,6 +532,7 @@ export function hero(character, time, context = ctx) {
       if(jiang){poly([[-22,-136],[-31,-148],[-27,-125]],'#c7dced',ink);poly([[22,-136],[31,-148],[27,-125]],'#c7dced',ink);line([[-5,-138],[5,-138]],'#fcdef1',2);}
       if(choumo)poly([[-13,-144],[-15,-158],[-5,-150],[0,-166],[6,-149],[17,-154],[12,-143]],base,ink);
     }
+    c.restore();heroSuitFinish(character,time);
     if(action==='delay'){oval(43,-143,14,14,'#fff1bd',ink);line([[43,-152],[43,-143],[50,-140]],'#8b5aa7',3);}
     if(action==='slime')oval(58,-64,10,9,'#b5e7a4','#529b7b');
     if(jiang&&character.skateTime>0){line([[-29,8],[-8,8]],'#83c9df',4);line([[8,8],[32,8]],'#83c9df',4);line([[-65,3],[-40,3]],'#b9eaf2',4);line([[-53,-6],[-35,-6]],'#b9eaf2',3);}
@@ -438,6 +582,7 @@ export function hero(character, time, context = ctx) {
     }
     poly([[-8, -88], [0, -92], [8, -88], [0, -83]], '#69c7e1', '#627f7c');
     line([[-3, -88], [0, -89]], '#e6ffff', 2);
+    c.save();c.translate(0,-102);c.scale(.86,.87);c.translate(0,102);
     poly([[-25, -136], [-17, -150], [-5, -154], [5, -154], [17, -150], [25, -136], [24, -121], [13, -107], [0, -102], [-13, -107], [-24, -121]], silver, ink);
     poly([[-5, -149], [0, -169], [5, -149], [3, -132], [-3, -132]], silver);
     line([[-6, -151], [-12, -143], [-7, -133]], red, 2.5);
@@ -450,6 +595,7 @@ export function hero(character, time, context = ctx) {
     line([[0, -131], [0, -119]], '#93a9a2', 1.5);
     poly([[-9, -116], [0, -114], [9, -116], [5, -109], [-5, -109]], '#a1b4ad');
     line([[-7, -115], [7, -115]], '#f2f3e7', 2);
+    c.restore();heroSuitFinish(character,time);
     c.restore(); c = previousContext; return;
   }
   line([[-12, -47], [-15 - walking, -24], [-16 - walking, -4]], id === 'zero' ? red : suit, 21);
@@ -519,6 +665,7 @@ export function hero(character, time, context = ctx) {
   poly([[19, -82], [30, -75], [37, -93], [20, -87]], gold, ink);
   poly([[0, -89], [14, -80], [11, -67], [0, -58], [-11, -67], [-14, -80]], gold, ink);
   oval(0, -76, 9, 10, silver, '#ba9045'); oval(0, -76, 6, 7, '#59bed9', ink); oval(-2, -79, 2, 3, '#d9ffff');
+  c.save();c.translate(0,-90);c.scale(.86,.87);c.translate(0,90);
   poly([[-22, -127], [-14, -139], [14, -139], [24, -125], [22, -106], [12, -91], [0, -87], [-13, -93], [-24, -109]], silver, ink);
   poly([[-26, -118], [-18, -111], [-16, -97], [-27, -106]], '#e0e8e1', ink);
   poly([[26, -118], [18, -111], [16, -97], [27, -106]], '#e0e8e1', ink);
@@ -535,6 +682,7 @@ export function hero(character, time, context = ctx) {
       const timer = [[-6, -78], [0, -82], [6, -78], [5, -68], [-5, -68]];
       poly(timer, '#68cbe3', ink); line([[-2, -78], [-2, -74]], '#e9ffef', 2);
     }
+    c.save();c.translate(0,-90);c.scale(.86,.87);c.translate(0,90);
     const crown = -137;
     if (id === 'nexus') {
       poly([[-19, -124], [-12, crown], [0, crown - 4], [12, crown], [19, -124], [18, -107], [9, -94], [0, -90], [-9, -94], [-18, -107]], silver, ink);
@@ -575,10 +723,12 @@ export function hero(character, time, context = ctx) {
     poly([[-8, -100], [0, -98], [8, -100], [4, -93], [-4, -93]], '#91a7a3');
     line([[-6, -99], [6, -99]], '#f3f5e7', 2);
   }
+  c.restore();heroSuitFinish(character,time);
   c.restore(); c = previousContext;
 }
 export function monster(enemy, time, playerX, context = ctx) {
   const previousContext = c; c = context;
+  const ink = '#26313a';
   const id = enemy.id, info = ENEMIES[id];
   if (id === 'shumo') {
     c.save();c.translate(enemy.x,512);c.scale(playerX<enemy.x?-1:1,1);
@@ -586,10 +736,11 @@ export function monster(enemy, time, playerX, context = ctx) {
     hero({id:'choumo',x:0,dir:1,moving:enemy.charge===0&&!(enemy.pauseTime>0),firing:0,invincible:enemy.hit>0?0.1:0,action:enemy.charge>0?'weapon':''},time,c);
     c.restore();c=previousContext;return;
   }
-  const color = enemy.hit > 0 ? '#d3cfb6' : info.color;
+  const color = enemy.hit > 0 ? '#d3cfb6' : metalSurface(-39,-105,43,-50,'#626a70',info.color,info.color);
   const facingX=id==='wukong'&&enemy.spell==='staff'&&(enemy.charge>0||enemy.skillEffectTime>0)?enemy.targetX:playerX;
   c.save(); c.translate(enemy.x, 512); c.scale(facingX < enemy.x ? -1 : 1, 1);
   oval(0, 3, 43, 10, '#6d755b33');
+  c.scale(id==='belial'?.86:1,id==='empera'||id==='belial'?1.12:1.04);
   if (enemy.slipTime > 0) { c.rotate(-0.85); }
   if (!reduceMotion) c.translate(0, Math.sin(time * 6) * 1.5);
   if(id==='wukong'){
@@ -618,10 +769,27 @@ export function monster(enemy, time, playerX, context = ctx) {
       poly([[-21,-133],[-11,-142],[0,-134],[11,-142],[21,-133],[18,-111],[0,-101],[-18,-111]],'#f1d5a0',ink);
       line([[-18,-130],[-7,-126]],'#6b5137',4);line([[7,-126],[18,-130]],'#6b5137',4);oval(-10,-123,3,4,ink);oval(10,-123,3,4,ink);
       line([[-8,-111],[0,-107],[9,-112]],'#8f583a',2);line([[-25,-143],[0,-149],[25,-143]],'#e9c24f',7);
-      for(const s of [-1,1])line([[s*9,-149],[s*13,-174],[s*30,-193],[s*41,-180]],'#bf6045',4);
+      for(const s of [-1,1]) {
+        c.beginPath();c.moveTo(s*9,-149);c.bezierCurveTo(s*10,-193,s*40,-211,s*44,-178);c.strokeStyle='#a83938';c.lineWidth=3;c.stroke();
+        for(let j=0;j<5;j++)line([[s*(20+j*4),-187-j*.6],[s*(27+j*3),-179-j*.3]],'#dfa660',1);
+      }
+      for(const s of [-1,1]) {
+        poly([[s*3,-91],[s*19,-102],[s*29,-94],[s*22,-82],[s*10,-79]],metalSurface(-25,-100,29,-80,'#916221','#fff0b0','#d4a24a'),ink);
+        line([[s*9,-89],[s*21,-94]],'#fff0ae',1.5);
+        for(let y=-73;y<-55;y+=5)line([[s*3,y],[s*15,y-4],[s*20,y-8]],'#9b6c2f',1);
+        poly([[s*15,-39],[s*25,-36],[s*28,-17],[s*15,-18]],'#8d322f',ink);
+        line([[s*18,-34],[s*22,-21]],'#efc45f',2);
+        for(let j=0;j<3;j++)line([[s*(20+j*2),-138],[s*(25+j*2),-130]],'#885936',1.2);
+      }
+      oval(0,-45,7,7,'#eccb6a',ink);poly([[0,-49],[4,-45],[0,-41],[-4,-45]],'#aa4940');
+      line([[-5,-120],[0,-115],[5,-120]],'#a87a50',1.5);
       const striking=enemy.spell==='staff'&&enemy.skillEffectTime>0;
       const ends=striking?[[15,-65],[230,-65]]:[[48,-8],[48,-164]];
       line(ends,'#874437',9);for(const [x,y]of ends)oval(x,y,striking?15:6,striking?6:16,'#f1ce67',ink);
+      line(ends,'#d18555',2);for(const [x,y]of ends) {
+        if(striking)for(let j=-7;j<=7;j+=7)line([[x+j,y-4],[x+j,y+4]],'#96702b',1);
+        else for(let j=-9;j<=9;j+=6)line([[x-4,y+j],[x+4,y+j]],'#96702b',1);
+      }
     }
     c.restore();c=previousContext;return;
   }
@@ -635,6 +803,7 @@ export function monster(enemy, time, playerX, context = ctx) {
     oval(-11,-126,4,6,ink);oval(11,-126,4,6,ink);oval(-10,-104,3,3,ink);oval(10,-104,3,3,ink);
     c.setLineDash([4,4]);line([[0,-82],[0,-25]],'#9d8f7d',2);c.setLineDash([]);
     box(-11,-68,22,13,'#90b7a0',3,ink);line([[-10,-62],[10,-62]],'#e8ead6',2);
+    for(const s of [-1,1]) {line([[s*13,-138],[s*18,-145]],'#fff1c9',1.5);oval(s*10,-128,1,1.5,'#fff');line([[s*19,-85],[s*25,-67]],'#f8ead0',1.5);}
     c.restore();c=previousContext;return;
   }
   if(id==='tangseng'){
@@ -645,8 +814,12 @@ export function monster(enemy, time, playerX, context = ctx) {
     line([[-7,-96],[13,-20]],'#edbf78',2);line([[-25,-84],[-42,-60]],'#e4b85f',16);line([[24,-85],[43,-62]],'#e4b85f',16);
     oval(0,-123,25,28,'#edd4aa',ink);box(-26,-151,52,13,'#d6ad4f',4,ink);
     for(const s of [-1,0,1])poly([[s*17-10,-150],[s*17,-173+(s===0?-5:0)],[s*17+10,-150]],'#e4c16c',ink);
+    for(const s of [-1,0,1]) {oval(s*17,-157,4,6,'#b94e48',ink);line([[s*17-5,-151],[s*17,-168],[s*17+5,-151]],'#fff0bd',1);}
+    for(let y=-82;y<-25;y+=18)for(let x=-17;x<20;x+=14)oval(x+(Math.floor(y/18)%2?5:0),y,1.5,1.5,'#f5dda1');
+    line([[-20,-69],[-24,-25]],'#8f493d',2);line([[24,-62],[29,-23]],'#fff0b0',1.5);
     line([[-15,-126],[-7,-126]],ink,2);line([[7,-126],[15,-126]],ink,2);line([[-7,-111],[0,-108],[7,-111]],ink,2);
     line([[44,-8],[44,-154]],'#96713f',6);oval(44,-161,14,17,'#e6c96f',ink);oval(44,-161,7,10,'#f7edc4',ink);
+    for(const s of [-1,1])for(let j=0;j<3;j++)oval(44+s*(10+j*2),-163+j*7,3,5,'#e6c96f','#946e32');
     if(enemy.shieldTime>0)oval(0,-83,61,102,'#f8e6a144','#daba60');
     c.restore();c=previousContext;return;
   }
@@ -664,7 +837,11 @@ export function monster(enemy, time, playerX, context = ctx) {
     line([[-8,-105],[0,-101],[9,-105]],'#765373',2);
     box(-31,-97,62,14,'#dd8e65',6,ink);box(14,-88,13,31,'#dd8e65',4,ink);
     for(let y=-82;y<-59;y+=7)line([[15,y],[26,y]],'#f2c795',2);
-    box(33,-48,24,28,'#a77b54',6,ink);c.restore();c=previousContext;return;
+    box(33,-48,24,28,'#a77b54',6,ink);
+    for(let y=-43;y<-23;y+=5)line([[36,y],[54,y]],'#d6ad79',1);
+    for(let x=38;x<55;x+=5)line([[x,-45],[x,-23]],'#815f49',1);
+    for(const s of [-1,1]) {line([[s*8,-108],[s*17,-107]],'#8e7899',1);line([[s*23,-115],[s*27,-113]],'#8e7899',1);}
+    c.restore();c=previousContext;return;
   }
   if (id === 'empera') {
     poly([[-30, -109], [-61, -3], [-31, -14], [-15, 0], [15, 0], [35, -16], [59, -3], [31, -109]], '#30313b', ink);
@@ -754,6 +931,7 @@ export function monster(enemy, time, playerX, context = ctx) {
       line([[-10, headY + 13], [0, headY + 16], [10, headY + 13]], ink, 2);
     }
   }
+  monsterSurfaceDetails(id);
   c.restore();
   if (enemy.hp !== undefined) {
     label(info.name, enemy.x, 313, 15);
@@ -871,7 +1049,7 @@ for (const [id, name] of Object.entries(heroNames)) {
   button.setAttribute('aria-pressed', String(id === selectedHero));
   const portrait = document.createElement('canvas'); portrait.width = 140; portrait.height = 130;
   portrait.setAttribute('aria-hidden', 'true');
-  const pc = portrait.getContext('2d'); pc.translate(68, 140); const portraitScale = id === 'noa' ? 0.64 : 0.84; pc.scale(portraitScale, portraitScale); pc.translate(0, -512);
+  const pc = portrait.getContext('2d'); pc.translate(68, 120); const portraitScale = id === 'noa' ? 0.51 : 0.63; pc.scale(portraitScale, portraitScale); pc.translate(0, -512);
   hero({ id, x: 0, dir: 1, moving: false, firing: 0, invincible: 0 }, 0, pc);
   const text = document.createElement('span'); text.textContent = name;
   button.append(portrait, text); document.querySelector('#hero-options').append(button);
@@ -885,7 +1063,7 @@ for (const [id, info] of Object.entries(ENEMIES)) {
   button.setAttribute('aria-pressed', String(id === selectedEnemy));
   const portrait = document.createElement('canvas'); portrait.width = 150; portrait.height = 150;
   portrait.setAttribute('aria-hidden', 'true');
-  const pc = portrait.getContext('2d'); pc.translate(75, 143); pc.scale(0.76, 0.76); pc.translate(0, -512);
+  const pc = portrait.getContext('2d'); pc.translate(75, 138); const portraitScale = id === 'wukong' ? 0.63 : 0.7; pc.scale(portraitScale, portraitScale); pc.translate(0, -512);
   monster({ id, x: 0, hit: 0 }, 0, 1, pc);
   const text = document.createElement('span'); text.textContent = info.name;
   if (id === 'belial') { text.textContent += ' ★'; button.title = '远程强敌：24点能量，保持距离发射强化光弹；红色蓄力提示时移动躲避。'; }

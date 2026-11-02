@@ -7,7 +7,7 @@ async page=>{
  const face=async k=>{await hold(k);await q.waitForTimeout(60);await q.mouse.up()};
  const clean=async()=>{const g=await snap();assert(g.enemyId==='wukong'&&g.monsters[0].hp===40&&!g.monsters[0].flightTime&&!g.monsters[0].burrowTime&&!g.monsters[0].formTime&&g.monsters[0].form===''&&!g.enemyShots.length&&g.hero.moveTarget===null,'new round resets boss and inputs')};
  try{
-  await q.goto('http://127.0.0.1:4185/');assert(await q.locator('[data-enemy]').count()===13,'13 opponents');assert(await q.locator('[data-hero]').count()===12,'12 heroes');assert(await q.locator('[data-enemy=tangseng]').count()===1,'Tang Seng retained');
+  await q.goto('http://127.0.0.1:4186/');await q.locator('#landing-start').click();assert(await q.locator('[data-enemy]').count()===13,'13 opponents');assert(await q.locator('[data-hero]').count()===12,'12 heroes');assert(await q.locator('[data-enemy=tangseng]').count()===1,'Tang Seng retained');
   for(const [width,height]of [[1365,900],[390,650],[320,568]]){
    await q.setViewportSize({width,height});if(width<1000)await q.locator('#enemy-toggle').click();await q.locator('[data-enemy=wukong]').click();
    assert((await snap()).monsters[0].hp===40&&await q.locator('#opponent-name').innerText()==='孙悟空','Wukong selectable');

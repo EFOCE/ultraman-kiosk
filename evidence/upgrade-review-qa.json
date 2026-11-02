@@ -1,0 +1,25 @@
+{
+  "date": "2026-11-02",
+  "preview": "http://127.0.0.1:4186/",
+  "status": "PASS_FOR_REVIEW",
+  "logic": "node self-test.mjs PASS; model.mjs unchanged",
+  "layout": {
+    "viewports": [[1365,900],[390,650],[320,568],[780,600],[700,400]],
+    "checks": ["landing CTA visible", "game hidden until entry", "12 heroes and 13 opponents", "no horizontal overflow", "all game controls unobscured", "music panel does not resize battlefield", "real start, skill and restart"],
+    "runtimeErrors": []
+  },
+  "characters": {"heroes":12,"opponents":13,"renderCombinations":100,"portraitEdgeClipping":0,"runtimeErrors":[]},
+  "recording": {
+    "title": "JRPG Epic Rock Battle Theme #1",
+    "artist": "HydroGene",
+    "durationSeconds": 115.29288,
+    "observedPlaybackTime": 0.206265,
+    "defaultVolume": 0.35,
+    "outputMeanSquareEnergy": 0.01009299593200372,
+    "loopBoundaryPassed": true,
+    "controls": ["volume", "pause retained across battle start", "continue while attacking with settings closed", "mute and resume", "single track and context", "no synth overlap", "simulated visibility pause and resume"],
+    "runtimeErrors": []
+  },
+  "combatRegression": {"scope":"new layout before final artwork; battle model unchanged", "wukongSkills":["fly","burrow","transform","staff"],"victory":{"hp":3,"time":15.480600000000033},"loss":true,"restart":true,"runtimeErrors":[]},
+  "limits": ["stylized Canvas redraw, not official original assets", "no human listening quality evaluation", "no full cross-browser or physical mobile testing", "official Apple previews loaded metadata but continuous playback not verified; not the default soundtrack", "loop includes original introduction"]
+}

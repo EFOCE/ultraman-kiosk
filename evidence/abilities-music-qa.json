@@ -1,0 +1,88 @@
+{
+  "status": "PASS",
+  "report": {
+    "layouts": [
+      [
+        1365,
+        900
+      ],
+      [
+        780,
+        600
+      ],
+      [
+        390,
+        650
+      ],
+      [
+        320,
+        568
+      ],
+      [
+        400,
+        400
+      ]
+    ],
+    "skills": [
+      "Noa: wings, blink, lightning, head marker",
+      "Ruebe: carrot transformation, carrot blade, headwave, bind"
+    ],
+    "spells": [
+      "chant",
+      "shield",
+      "wave",
+      "lotus"
+    ],
+    "endings": [
+      "won",
+      "lost",
+      "restart"
+    ],
+    "music": {
+      "enabled": true,
+      "state": "running",
+      "loops": 1,
+      "voices": 6,
+      "scheduled": 4,
+      "effects": 41,
+      "source": "book",
+      "filePlaying": false,
+      "fileTime": 0,
+      "lastEffect": "lose",
+      "error": false,
+      "energy": 0.003531502893801935,
+      "contexts": 1,
+      "timers": 1,
+      "switchMuteRestart": true
+    },
+    "preview": {
+      "mime": "audio/webm;codecs=opus",
+      "bytes": 241482
+    },
+    "artwork": {
+      "ruebe": 584265140,
+      "seven": 432427880,
+      "zero": 866470081,
+      "geed": 3700115263,
+      "mebius": 2908599938,
+      "nexus": 3089154531,
+      "tregear": 1275748300,
+      "zhuqingqing": 3057765162,
+      "noa": 2468737400,
+      "jiangshuyan": 1283271247,
+      "taro": 1313108129,
+      "choumo": 2781229782
+    },
+    "errors": [],
+    "validationRuns": {
+      "layoutAndSkills": "Passed before spell capture test was adjusted to keep the wave visible",
+      "spellsEndingsMusicArtwork": "Passed in the independent continuation; no game state injection"
+    },
+    "finalSmoke": {
+      "narrowWalkAndAttack": true,
+      "previewSelectionStopsBook": true,
+      "bookSelectionUnloadsPreview": true,
+      "errors": []
+    }
+  }
+}

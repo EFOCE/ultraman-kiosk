@@ -1,0 +1,32 @@
+{
+  "status": "PASS",
+  "report": {
+    "layouts": [
+      [
+        1365,
+        900
+      ],
+      [
+        390,
+        650
+      ],
+      [
+        320,
+        568
+      ]
+    ],
+    "skills": [
+      "fly",
+      "burrow",
+      "transform",
+      "staff"
+    ],
+    "victory": {
+      "hp": 5,
+      "time": 13.054399999999925
+    },
+    "loss": true,
+    "restart": true,
+    "errors": []
+  }
+}

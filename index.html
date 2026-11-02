@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>罗布奥特曼 · 小卖部保卫战</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div><p class="eyebrow"><span>✦</span> 街角英雄俱乐部 <span class="edition">小游戏 / 01</span></p><h1><b id="hero-name">罗布奥特曼</b><span>小卖部保卫战</span></h1><p class="subtitle">怪兽盯上了零食！选一位喜欢的英雄，守护放学后的快乐。</p></div>
+      <div class="badge">今日任务<strong>守护小卖部</strong><span>零食安全，就靠你啦</span></div>
+    </header>
+    <section class="arcade" aria-label="小卖部保卫战游戏">
+      
+      <div class="hero-picker" role="region" aria-label="左侧英雄选择" tabindex="0"><div class="picker-label">选择英雄<small>向下滚动查看更多</small></div><div id="hero-options" role="group" aria-label="选择英雄"></div></div>
+      <button id="enemy-toggle" aria-expanded="false" aria-controls="enemy-sidebar">怪兽 ◀</button><aside id="enemy-sidebar" class="enemy-picker" aria-label="右侧怪兽选择" tabindex="0"><div class="picker-label">选择怪兽<small>十三位任选</small></div><div id="enemy-options" role="group" aria-label="选择对手"></div></aside><div class="selection-panel" role="region" aria-label="天气与音乐设置" tabindex="0"><div class="weather-controls"><label>天气 <select id="weather"><option value="random">随机</option><option value="sun">晴天</option><option value="rain">下雨</option><option value="storm">雷雨</option><option value="tornado">龙卷风</option></select></label><span id="weather-current" aria-live="polite">本局：晴天</span></div>
+      <details class="music-options"><summary>♫ 音乐设置 · 主题曲与原创器乐</summary><p>《ウルトラマンメビウス》· Project DMM with ウルトラ防衛隊</p><label>配乐 <select id="music-source"><option value="preview">梦比优斯主题曲（官方90秒试听）</option><option value="file">梦比优斯主题曲（本地音频循环）</option><option value="book">书本穿越记（原创器乐曲）</option><option value="original">原创备用配乐（不是主题曲）</option></select></label><div id="theme-player"></div><p>官方试听需点击播放器的播放键，不是完整歌曲。静音、收起音乐设置或离开页面会停止试听；再次试听需重新点播放。</p><label class="audio-file">本地完整音频 <input id="music-file" type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg"></label><p id="music-note" role="status">可选择你已有的音频文件在游戏内循环播放，文件不会上传。</p><a href="https://va.lnk.to/1fCWsYpg" target="_blank" rel="noopener">发行方官方收听入口 ↗</a></details>
+      </div>
+      <div class="statusbar"><div><span class="status-label">英雄能量</span><span id="health" aria-label="生命 5 / 5">♥ ♥ ♥ ♥ ♥</span></div><div class="mission">迎战 <b id="opponent-name">安培拉星人</b></div><div class="score"><span class="status-label">对手能量</span><strong id="score">18 <small>/ 18</small></strong></div></div>
+      <div class="stage">
+        <canvas id="game" width="1100" height="590" role="img" aria-label="金银装甲的罗布奥特曼在小卖部门口与卡通怪兽交战。点击地面移动，点击下方按钮攻击。"></canvas>
+        <div class="message" id="message" aria-live="polite"><span class="message-icon" id="message-icon">✦</span><h2 id="message-title">小卖部需要你！</h2><p id="message-text">怪兽来捣乱啦！守护小卖部，让店铺安心营业。点地面移动，点按钮出招。</p><button id="start" class="primary">开始守护 <span>→</span></button></div>
+        <div class="corner-note">纯净卡通对战 · 保护每一包零食</div>
+      </div>
+      <div class="controls"><div class="movement"><button data-action="left" aria-label="向左移动">←<small>按住左移</small></button><button data-action="right" aria-label="向右移动">→<small>按住右移</small></button></div><button data-action="fire" class="fire" aria-label="发射光线">✦ 光线 <small>按住连续发射</small></button><button data-action="punch" class="attack" aria-label="近身快拳">快拳<small>近身</small></button><button data-action="kick" class="attack" aria-label="踢腿击退">踢腿<small>击退</small></button><button data-action="weapon" class="attack weapon" aria-label="能量飞刃">能量飞刃<small>2.4秒冷却</small></button><div class="control-options"><button id="sound" class="sound" aria-pressed="false" aria-label="开启音乐和音效"><span>♫ 开启声音</span><small>音效 / 官方试听</small></button><button id="music-settings" class="music-settings" title="梦比优斯主题曲试听与音乐设置">音乐</button><button id="restart" class="restart" aria-label="重新开始游戏">↻ <span>重新开始</span></button></div></div>
+    </section>
+    <footer><span><b>玩法小贴士</b> 击退所选对手就能获胜；被碰到会掉能量。</span><span>鼠标点击地面移动 <i>·</i> 点击按钮攻击与重开</span></footer>
+    <p id="announcement" class="sr-only" aria-live="polite"></p>
+  </main>
+  <script type="module" src="game.mjs"></script>
+</body>
+</html>
+
+
+
+
+
+

@@ -1,0 +1,111 @@
+{
+  "layouts": [
+    [
+      1365,
+      900
+    ],
+    [
+      1024,
+      768
+    ],
+    [
+      780,
+      600
+    ],
+    [
+      600,
+      600
+    ],
+    [
+      390,
+      650
+    ],
+    [
+      320,
+      568
+    ],
+    [
+      700,
+      400
+    ],
+    [
+      400,
+      400
+    ]
+  ],
+  "heroes": [
+    {
+      "id": "noa",
+      "labels": [
+        "快拳近身",
+        "踢腿击退",
+        "能量飞刃2.4秒冷却"
+      ]
+    },
+    {
+      "id": "jiangshuyan",
+      "labels": [
+        "拖延作业7秒冷却",
+        "流鼻涕1.4秒冷却",
+        "滑冰2.8秒冷却"
+      ]
+    },
+    {
+      "id": "taro",
+      "labels": [
+        "快拳近身",
+        "踢腿击退",
+        "能量飞刃2.4秒冷却"
+      ]
+    },
+    {
+      "id": "choumo",
+      "labels": [
+        "眼泪水花5秒冷却",
+        "臭脚丫1.1秒冷却",
+        "发射臭虫2.4秒冷却"
+      ]
+    }
+  ],
+  "weather": [
+    "sun",
+    "rain",
+    "storm",
+    "tornado"
+  ],
+  "originalArtwork": {
+    "ruebe": 584265140,
+    "seven": 432427880,
+    "zero": 866470081,
+    "geed": 3700115263,
+    "mebius": 2908599938,
+    "nexus": 3089154531,
+    "tregear": 1275748300,
+    "zhuqingqing": 3057765162
+  },
+  "mouseEndings": [
+    "won",
+    "lost",
+    "restart"
+  ],
+  "soundControls": true,
+  "random": [
+    "storm",
+    "rain",
+    "rain",
+    "rain",
+    "storm",
+    "sun",
+    "tornado",
+    "storm",
+    "rain",
+    "tornado",
+    "sun",
+    "storm",
+    "rain",
+    "tornado",
+    "tornado",
+    "storm"
+  ],
+  "errors": []
+}

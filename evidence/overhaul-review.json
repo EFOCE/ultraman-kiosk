@@ -1,0 +1,58 @@
+{
+  "date": "2026-11-07",
+  "scope": "Local uncommitted character, skills, movement, sound and landscape overhaul",
+  "preview": "http://127.0.0.1:4186/",
+  "published": false,
+  "assets": {
+    "generatedFullBodyPngs": 16,
+    "alphaVerified": true,
+    "totalBytes": 29598322,
+    "otherEnemies": "11 existing full-body Canvas figures retained",
+    "generationRecord": "assets/fighters/GENERATION.md"
+  },
+  "checks": {
+    "node self-test.mjs": "PASS: 52 hero skill slots, 182 controlled roster win/restart scenarios, 14 enemy loss paths, enemy skill warnings, jump/crouch collision, statuses and weather",
+    "node test-boss-xingxing.mjs": "PASS",
+    "node --check game.mjs": "PASS",
+    "node --check model.mjs": "PASS",
+    "node --check server.cjs": "PASS",
+    "git diff --check": "PASS; line-ending normalization warnings only",
+    "http": "16 fighter PNGs and 4 application modules returned HTTP 200 from the running local server"
+  },
+  "browser": {
+    "surface": "Dedicated Chrome tab via computer-use tooling",
+    "manualCoverage": [
+      "Landing and 13-hero / 14-enemy selection",
+      "Boss and Xingxing full-body combat rendering",
+      "Boss gravity hit: Xingxing 30 HP to 26 HP",
+      "Boss versus Gomora: gravity plus orbital strike, Boss WIN",
+      "Replay resets health and enemy state",
+      "Jump button visibly lifts Boss off the ground",
+      "Pause and resume controls",
+      "Fullscreen entry/exit UI in desktop Chrome",
+      "Portrait-to-landscape resize without reload",
+      "Eight combat controls remain within viewport at all five tested sizes"
+    ],
+    "layouts": [
+      {"width": 320, "height": 568, "stageHeight": 215.6015625, "horizontalOverflow": false, "clippedControls": []},
+      {"width": 393, "height": 873, "stageHeight": 551.6015625, "horizontalOverflow": false, "clippedControls": []},
+      {"width": 640, "height": 360, "stageHeight": 288, "horizontalOverflow": false, "clippedControls": []},
+      {"width": 873, "height": 393, "stageHeight": 321, "horizontalOverflow": false, "clippedControls": []},
+      {"width": 1365, "height": 900, "stageHeight": 558.6015625, "horizontalOverflow": false, "clippedControls": []}
+    ],
+    "finalConsoleErrors": [],
+    "viewportOverrideReset": true,
+    "previewTabRetained": true,
+    "screenshots": ["overhaul-desktop.jpg", "overhaul-landscape.jpg", "overhaul-win.jpg", "overhaul-jump.jpg"]
+  },
+  "limits": [
+    "182 roster scenarios are controlled model tests, not 182 manually played battles.",
+    "Xiaomi 15 Pro hardware, multitouch and speaker sound have not been tested.",
+    "Desktop viewport and fullscreen UI checks do not establish Android browser fullscreen or orientation-lock behavior.",
+    "Character animation uses 2D sprite transforms rather than skeletal animation.",
+    "Character sounds are distinct synthesized effects, not original TV recordings.",
+    "Generated PNGs total about 29.6 MB and are loaded on demand; mobile network loading time has not been measured.",
+    "Legacy verify-*.js/cjs suite was not run; current browser evidence is from the dedicated interactive Chrome session.",
+    "No commit, push or production deployment was performed for this revision."
+  ]
+}

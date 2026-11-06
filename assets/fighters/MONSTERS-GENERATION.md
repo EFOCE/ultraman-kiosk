@@ -1,0 +1,21 @@
+# 怪兽全身素材
+
+2026-11-07，内置 image_gen，transparent_background=true。新增 11 张独立角色 PNG；已有贝利亚、星星、蒋书墨保留本轮前的精细重绘。27 张角色图全部按 alpha 有效边界裁取、统一脚底基线和角色显示高度。原文件未做像素编辑。
+
+通用提示词（SUBJECT 替换为下表描述）：
+
+```text
+Use case: stylized-concept. Single standalone full-body fighting game sprite. SUBJECT Premium finely detailed tokusatsu 3D game art matching polished detailed Ultraman sprites, coherent material highlights, crisp textures, realistic metal/leather/fur. Combat-ready three-quarter stance facing RIGHT, feet apart, hands separated from torso. Entire head, horns, hands, legs, both boots/feet, accessories and tail inside frame with 5% margin. Figure occupies 90% portrait height. Character alone on TRUE TRANSPARENT alpha background. No floor, shadow, backdrop, black rectangle, text, border, energy clouds or other figures. Proportions faithful to this character but normalized standing height across roster.
+```
+
+- empera.png: Alien Empera from Ultraman: tall dark emperor, black gunmetal intricately segmented armored suit, ridged horned black helmet, slit amber eyes, dark cape behind shoulders, imposing upright humanoid stance. Source: exec-263aa6e0-93f1-4d4e-bdb0-1a12c26e2746.png.
+- gomora.png: Gomora from Ultraman: recognizable brown muscular dinosaur kaiju, crescent horns on head, nose horn, ridged thick hide, bulky thighs, long thick tail curves beside the body and stays fully within frame. Source: exec-f438e2c7-2ec1-4351-b2ed-72a98665abbe.png.
+- tangseng.png: Tang Sanzang / Tang Seng, kind Chinese Buddhist monk character, embroidered red and gold kasaya over saffron robes, ornate five-point monk crown, holding a gold ringed khakkhara staff, full feet in traditional cloth shoes. Source: exec-c9103876-a09e-47b3-b38e-4ba51a437440.png.
+- baltan.png: Alien Baltan from Ultraman: recognizable silver-blue insect alien, large orange compound eyes, upright antennae, segmented exoskeleton, two enormous lobster pincer hands, organic blue and grey suit. Source: exec-bc3b65a4-59a6-42a0-8ffb-9bf742c89058.png.
+- zetton.png: Zetton from Ultraman: recognizable black and ivory striped carapace armor, long curved antenna horns, glowing amber vertical face organ, two amber chest plates, powerful broad legs. Source: exec-a4315d3a-362a-4819-bfe7-6e3ffb8d2df9.png.
+- buniu.png: Original friendly formidable bovine monster Buniu: upright anthropomorphic ivory-white bull with large curved polished brown horns, shaggy cream fur, bronze shoulder armor, brown leather belt, large cloven hoof feet, muscular athletic fighting stance. Source: exec-557a5172-5015-40ae-87c0-51d17a6ac925.png.
+- kingjoe.png: King Joe from Ultraman: recognizable retro alien super robot, brushed gold and bronze segmented mechanical armor, bell-shaped round head with tiny antenna and circular side ear plates, red blue yellow chest panels, cylindrical arms, broad heavy mechanical feet. Source: exec-44a91df4-8fe9-4ee3-a2dc-ade48989d654.png.
+- bemstar.png: Bemstar from Ultraman: recognizable grey-green avian kaiju, short pointed head horn, yellow beaked bird face, broad finlike wing arms, five-point star-shaped mouth in abdomen, two strong birdlike legs and talons. Source: exec-44c85e31-8d4b-4c7d-8b3b-5195bf896374.png.
+- tyrant.png: Tyrant from Ultraman: recognizable grey fusion kaiju, long side horns, dinosaur snout, ridged torso, one arm ending in huge spiked mace and other arm in silver bladed sickle, huge clawed feet, tail visible to side. Source: exec-67ca6a4f-c094-4e39-a676-9b64d76c3839.png.
+- grandma.png: Original grandmother monster: dignified elderly Chinese grandmother with silver-grey hair in bun, kind determined face, purple brocade martial robes with jade clasps and polished silver shoulder pieces, holding one purple slipper like a throwing weapon and a small tea cup, complete legs and embroidered cloth shoes, no caricature of age. Source: exec-305fecf9-a44f-41ad-b231-4ff59191c9f8.png.
+- wukong.png: Sun Wukong the Monkey King: handsome golden monkey face and fur, elaborate engraved gold Chinese warrior armor over crimson fabric, phoenix-wing crown with two long curved feathers kept inside frame, red scarf, sturdy gold armored boots, holding his gold-banded red Ruyi Jingu Bang staff diagonally but fully visible. Source: exec-c898c272-2e14-4cab-b07e-a892ef7018b3.png.

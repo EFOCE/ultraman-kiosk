@@ -1,0 +1,6 @@
+AddType application/javascript .mjs
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|mjs|css|json)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>

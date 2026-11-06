@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>街角英雄 · 小卖部保卫战</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="style.css">
@@ -11,7 +11,7 @@
   <section class="landing" id="landing" aria-labelledby="landing-title">
     <nav class="landing-nav" aria-label="游戏介绍"><a class="brand" href="#landing"><span>✦</span> 街角英雄 <small>HEROES NEXT DOOR</small></a><span class="issue">小小街角 · 大大勇气</span></nav>
     <div class="landing-grid">
-      <div class="landing-copy"><p class="landing-kicker"><span></span> 英雄集结，就差你了</p><h1 id="landing-title">小卖部<br><em>保卫战</em><span class="title-star" aria-hidden="true">✦</span></h1><p class="landing-description">怪兽来捣乱，放学后的快乐由你守护。<br>选一位英雄，带上绝招，一起出发！</p><button id="landing-start" class="launch">开始游戏 <span aria-hidden="true">↗</span></button><p class="landing-hint">只用鼠标，就能成为街角英雄</p><div class="landing-stats"><div><strong>12</strong><span>位英雄任你选</span></div><i>×</i><div><strong>13</strong><span>位对手等你挑战</span></div></div></div>
+      <div class="landing-copy"><p class="landing-kicker"><span></span> 英雄集结，就差你了</p><h1 id="landing-title">小卖部<br><em>保卫战</em><span class="title-star" aria-hidden="true">✦</span></h1><p class="landing-description">怪兽来捣乱，放学后的快乐由你守护。<br>选一位英雄，带上绝招，一起出发！</p><fieldset class="mode-choice"><legend>选择玩法</legend><label><input type="radio" name="game-mode" value="free" checked><b>自由对战</b><small>任选英雄与对手，练习你的绝招</small></label><label><input type="radio" name="game-mode" value="campaign"><b>闯关模式</b><small>连闯 14 关 · 胜利恢复 2 点能量</small></label></fieldset><label class="landing-music">配乐 <select id="landing-music"><option value="battle">热血摇滚</option><option value="calm">舒缓小镇</option></select></label><button id="landing-start" class="launch">开始游戏 <span aria-hidden="true">↗</span></button><p class="landing-hint">键盘、鼠标或触屏，选择你的战斗方式</p><div class="landing-stats"><div><strong>13</strong><span>位英雄任你选</span></div><i>×</i><div><strong>14</strong><span>位对手等你挑战</span></div></div></div>
       <div class="landing-poster"><div class="poster-orbit" aria-hidden="true"></div><div class="poster-heading">放学后，<br><b>轮到我们守护世界。</b></div><canvas id="landing-art" width="940" height="840" role="img" aria-label="罗布、赛罗和诺亚集结，迎战手持金箍棒的孙悟空"></canvas><div class="poster-stamp">新对手登场<strong>齐天大圣</strong><span>飞天 · 遁地 · 七十二变</span></div><div class="poster-caption"><span>街角小卖部 / 守护行动</span><b>READY, HERO?</b></div></div>
     </div>
     <div class="landing-guide" aria-label="游戏玩法"><div><span>01</span><p><b>选你的英雄</b><small>熟悉的伙伴，各有绝招</small></p></div><div><span>02</span><p><b>点地面，灵活走位</b><small>看到红色预警，记得躲开</small></p></div><div><span>03</span><p><b>释放技能，守住快乐</b><small>击退对手，小卖部安全啦</small></p></div></div>
@@ -20,25 +20,26 @@
   <main id="game-shell" hidden inert>
     <header>
       <div class="game-brand"><span aria-hidden="true">✦</span><div><p class="eyebrow">街角英雄 · 小卖部保卫战</p><h1><b id="hero-name">罗布奥特曼</b></h1></div></div>
-      <p class="header-tip">点地面移动 <span>·</span> 点按钮出招</p>
+      <p class="header-tip"><b id="mode-label">自由对战</b> · 点地面移动 <span>·</span> 点按钮出招</p>
     </header>
     <section class="arcade" aria-label="小卖部保卫战游戏">
       
-      <div class="hero-picker" role="region" aria-label="左侧英雄选择" tabindex="0"><div class="picker-label">英雄阵容<small>12 位 · 滚动选择</small></div><div id="hero-options" role="group" aria-label="选择英雄"></div></div>
-      <button id="enemy-toggle" aria-expanded="false" aria-controls="enemy-sidebar">怪兽 ◀</button><aside id="enemy-sidebar" class="enemy-picker" aria-label="右侧怪兽选择" tabindex="0"><div class="picker-label">选择怪兽<small>十三位任选</small></div><div id="enemy-options" role="group" aria-label="选择对手"></div></aside><div class="selection-panel" role="region" aria-label="天气与音乐设置" tabindex="0"><div class="weather-controls"><label>天气 <select id="weather"><option value="random">随机</option><option value="sun">晴天</option><option value="rain">下雨</option><option value="storm">雷雨</option><option value="tornado">龙卷风</option></select></label><span id="weather-current" aria-live="polite">本局：晴天</span></div>
-      <details class="music-options"><summary>♫ 音乐设置 · 热血摇滚</summary><p id="music-credit">《ウルトラマンメビウス》· Project DMM with ウルトラ防衛隊</p><label>配乐 <select id="music-source"><option value="battle" selected>热血摇滚 · 完整录音循环</option><option value="preview">梦比优斯主题曲 · 原声试听</option><option value="crew">Run through! · 出击原声试听</option><option value="heroes">HEROES! · 热血原声试听</option><option value="file">本地原声 · 完整循环</option><option value="book">书本穿越记（原创器乐曲）</option><option value="original">原创备用配乐（不是主题曲）</option></select></label><div id="theme-player"></div><p id="preview-note" hidden>官方原声试听约 90 秒，点击播放器 ▶ 播放。完整曲目可从官方平台收听，或导入本地音频循环。收起设置后可继续边打边听；静音或离开页面会停止试听。</p><label class="audio-file">本地完整音频 <input id="music-file" type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg"></label><label class="music-volume" hidden>配乐音量 <input id="music-volume" type="range" min="0" max="100" value="35" aria-label="配乐音量"></label><button id="music-toggle" type="button" hidden>暂停本地配乐</button><p id="music-note" role="status">默认配乐已随游戏内置，完整循环播放。也可导入你喜欢的音频，文件不会上传。</p><a id="battle-credit-link" href="https://opengameart.org/content/jrpg-epic-rock-battle-theme-1" target="_blank" rel="noopener">音乐：HydroGene · CC0 ↗</a><a id="official-music-link" hidden href="https://va.lnk.to/1fCWsYpg" target="_blank" rel="noopener">发行方官方收听入口 ↗</a></details>
+      <div class="hero-picker" role="region" aria-label="左侧英雄选择" tabindex="0"><div class="picker-label">英雄阵容<small>13 位 · 滚动选择</small></div><div id="hero-options" role="group" aria-label="选择英雄"></div></div>
+      <button id="hero-toggle" aria-expanded="false" aria-controls="hero-options">英雄</button><button id="enemy-toggle" aria-expanded="false" aria-controls="enemy-sidebar">怪兽 ◀</button><aside id="enemy-sidebar" class="enemy-picker" aria-label="右侧怪兽选择" tabindex="0"><div class="picker-label">选择怪兽<small>十四位任选</small></div><div id="enemy-options" role="group" aria-label="选择对手"></div></aside><div class="selection-panel" role="region" aria-label="天气与音乐设置" tabindex="0"><div class="weather-controls"><label>天气 <select id="weather"><option value="random">随机</option><option value="sun">晴天</option><option value="rain">下雨</option><option value="storm">雷雨</option><option value="tornado">龙卷风</option></select></label><span id="weather-current" aria-live="polite">本局：晴天</span></div>
+      <details class="music-options"><summary>♫ 音乐设置 · 热血摇滚</summary><p id="music-credit">《ウルトラマンメビウス》· Project DMM with ウルトラ防衛隊</p><label>配乐 <select id="music-source"><option value="calm">舒缓小镇 · 完整录音循环</option><option value="battle" selected>热血摇滚 · 完整录音循环</option><option value="preview">梦比优斯主题曲 · 原声试听</option><option value="crew">Run through! · 出击原声试听</option><option value="heroes">HEROES! · 热血原声试听</option><option value="file">本地原声 · 完整循环</option><option value="book">书本穿越记（原创器乐曲）</option><option value="original">原创备用配乐（不是主题曲）</option></select></label><div id="theme-player"></div><p id="preview-note" hidden>官方原声试听约 90 秒，点击播放器 ▶ 播放。完整曲目可从官方平台收听，或导入本地音频循环。收起设置后可继续边打边听；静音或离开页面会停止试听。</p><label class="audio-file">本地完整音频 <input id="music-file" type="file" accept="audio/*,.mp3,.m4a,.wav,.ogg"></label><label class="music-volume" hidden>配乐音量 <input id="music-volume" type="range" min="0" max="100" value="35" aria-label="配乐音量"></label><button id="music-toggle" type="button" hidden>暂停本地配乐</button><p id="music-note" role="status">默认配乐已随游戏内置，完整循环播放。也可导入你喜欢的音频，文件不会上传。</p><a id="battle-credit-link" href="https://opengameart.org/content/jrpg-epic-rock-battle-theme-1" target="_blank" rel="noopener">音乐：HydroGene · CC0 ↗</a><a id="official-music-link" hidden href="https://va.lnk.to/1fCWsYpg" target="_blank" rel="noopener">发行方官方收听入口 ↗</a></details>
       </div>
       <div class="statusbar"><div><span class="status-label">英雄能量</span><span id="health" aria-label="生命 5 / 5">♥ ♥ ♥ ♥ ♥</span></div><div class="mission">迎战 <b id="opponent-name">安培拉星人</b></div><div class="score"><span class="status-label">对手能量</span><strong id="score">18 <small>/ 18</small></strong></div></div>
       <div class="stage">
-        <canvas id="game" width="1100" height="590" role="img" aria-label="金银装甲的罗布奥特曼在小卖部门口与卡通怪兽交战。点击地面移动，点击下方按钮攻击。"></canvas>
+        <canvas id="game" width="1300" height="590" role="img" aria-label="金银装甲的罗布奥特曼在小卖部门口与卡通怪兽交战。点击地面移动，点击下方按钮攻击。"></canvas>
         <div class="message" id="message" aria-live="polite"><span class="message-icon" id="message-icon">✦</span><h2 id="message-title">小卖部需要你！</h2><p id="message-text">怪兽来捣乱啦！守护小卖部，让店铺安心营业。点地面移动，点按钮出招。</p><button id="start" class="primary">开始守护 <span>→</span></button></div>
-        <div class="corner-note">纯净卡通对战 · 保护每一包零食</div>
+        <div id="round-intro" class="round-intro" hidden aria-live="polite"><div class="versus"><span id="intro-hero"></span><b>VS</b><span id="intro-enemy"></span></div><strong id="round-call">READY</strong><small id="round-subtitle"></small></div><div class="corner-note">纯净卡通对战 · 保护每一包零食</div>
       </div>
-      <div class="controls"><div class="movement"><button data-action="left" aria-label="向左移动">←<small>按住左移</small></button><button data-action="right" aria-label="向右移动">→<small>按住右移</small></button></div><button data-action="fire" class="fire" aria-label="发射光线">✦ 光线 <small>按住连续发射</small></button><button data-action="punch" class="attack" aria-label="近身快拳">快拳<small>近身</small></button><button data-action="kick" class="attack" aria-label="踢腿击退">踢腿<small>击退</small></button><button data-action="weapon" class="attack weapon" aria-label="能量飞刃">能量飞刃<small>2.4秒冷却</small></button><div class="control-options"><button id="sound" class="sound" aria-pressed="false" aria-label="开启音乐和音效"><span>♫ 开启声音</span><small>音效 / 官方试听</small></button><button id="music-settings" class="music-settings" title="热血摇滚与音乐设置">音乐</button><button id="restart" class="restart" aria-label="重新开始游戏">↻ <span>重新开始</span></button></div></div>
+      <div class="controls"><div class="movement"><button data-action="left" aria-label="向左移动">←<small>按住左移</small></button><button data-action="right" aria-label="向右移动">→<small>按住右移</small></button><button data-action="jump" aria-label="跳跃">↑<small>W / 跳跃</small></button><button data-action="crouch" aria-label="下蹲">↓<small>S / 按住蹲下</small></button></div><button data-action="fire" class="fire" aria-label="发射光线">✦ 光线 <small>按住连续发射</small></button><button data-action="punch" class="attack" aria-label="近身快拳">快拳<small>近身</small></button><button data-action="kick" class="attack" aria-label="踢腿击退">踢腿<small>击退</small></button><button data-action="weapon" class="attack weapon" aria-label="能量飞刃">能量飞刃<small>2.4秒冷却</small></button><div class="control-options"><button id="home" type="button" aria-label="返回首页">首页</button><button id="fullscreen" type="button" aria-pressed="false">⛶ 全屏</button><button id="sound" class="sound" aria-pressed="false" aria-label="开启音乐和音效"><span>♫ 开启声音</span><small>音效 / 官方试听</small></button><button id="music-settings" class="music-settings" title="热血摇滚与音乐设置">音乐</button><button id="restart" class="restart" aria-label="重新开始游戏">↻ <span>重新开始</span></button></div></div>
     </section>
-    <footer><span><b>玩法小贴士</b> 击退所选对手就能获胜；被碰到会掉能量。</span><span>鼠标点击地面移动 <i>·</i> 点击按钮攻击与重开</span></footer>
+    <footer><span><b>玩法小贴士</b> 击退所选对手就能获胜；碰到对手不会掉血，留意主动攻击预警。</span><span>A / D 移动 · W 跳跃 · S 下蹲 · U / I / J / K 技能</span></footer>
     <p id="announcement" class="sr-only" aria-live="polite"></p>
   </main>
+  <aside id="character-info" class="character-info" hidden role="tooltip"></aside>
   <script type="module" src="game.mjs"></script>
   <script type="module">
     import { hero, monster } from './game.mjs';
@@ -50,14 +51,16 @@
       window.dispatchEvent(new Event('game-enter'));
     });
     window.addEventListener('keydown', event => {
-      if (!landing.hidden && ['KeyR', 'KeyA', 'KeyD', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyZ', 'KeyX', 'KeyC'].includes(event.code)) event.stopImmediatePropagation();
+      if (!landing.hidden && ['KeyR', 'KeyA', 'KeyD', 'KeyW','KeyS','ArrowUp','ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyU', 'KeyI', 'KeyJ', 'KeyK'].includes(event.code)) event.stopImmediatePropagation();
     }, true);
     const art = document.querySelector('#landing-art').getContext('2d');
     function portrait(draw, x, y, scale) { art.save(); art.translate(x,y); art.scale(scale,scale); art.translate(0,-512); draw(); art.restore(); }
+    function paintPoster(){art.clearRect(0,0,940,840);
     portrait(() => hero({id:'zero',x:0,dir:1,moving:false,firing:0,invincible:0},0,art),205,640,1.85);
     portrait(() => hero({id:'noa',x:0,dir:-1,moving:false,firing:0,invincible:0},0,art),665,595,1.7);
     portrait(() => hero({id:'ruebe',x:0,dir:1,moving:false,firing:0,invincible:0},0,art),430,725,2.35);
     portrait(() => monster({id:'wukong',x:0,hit:0},0,-1,art),780,755,1.5);
+    }paintPoster();window.addEventListener('character-art-ready',paintPoster);
     const musicPanel = document.querySelector('.music-options');
     document.addEventListener('pointerdown', event => {
       if (musicPanel.open && !event.target.closest('.music-options,#music-settings')) musicPanel.open = false;

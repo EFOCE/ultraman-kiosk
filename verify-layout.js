@@ -1,7 +1,7 @@
 async page => {
  const results=[],errors=[];page.on('pageerror',e=>errors.push(e.message));
  const assert=(ok,msg)=>{if(!ok)throw Error(msg)};
- for(const [width,height]of [[1365,900],[390,650],[320,568],[780,600],[700,400]]){
+ for(const [width,height]of [[1365,900],[390,650],[320,568],[780,600],[700,400],[873,393],[640,360]]){
   await page.setViewportSize({width,height});await page.goto('http://127.0.0.1:4186/');
   await page.locator('#landing-start').waitFor();
   assert(await page.locator('#landing').isVisible(),'landing visible');
@@ -12,11 +12,12 @@ async page => {
   if([1365,390,320].includes(width))await page.screenshot({path:'evidence/upgrade-landing-'+width+'.png',fullPage:true});
   await page.locator('#landing-start').click();
   assert(await page.locator('#landing').isHidden()&&await page.locator('#game-shell').isVisible(),'enter game');
-  assert(await page.locator('[data-hero]').count()===12&&await page.locator('[data-enemy]').count()===13,'roster retained');
+  assert(await page.locator('[data-hero]').count()===13&&await page.locator('[data-enemy]').count()===14,'roster retained');
   if(width<=1000)await page.locator('#enemy-toggle').click();
   await page.locator('[data-enemy=wukong]').click();
+  if(width>height&&height<=600)await page.locator('#hero-toggle').click();
   await page.locator('[data-hero=noa]').click();
-  await page.locator('#weather').selectOption('sun');
+  if(await page.locator('#weather').isVisible())await page.locator('#weather').selectOption('sun');
   const layout=await page.evaluate(()=>{
    const bar=document.querySelector('.controls').getBoundingClientRect(),stage=document.querySelector('.stage').getBoundingClientRect();
    const bad=[...document.querySelectorAll('.controls button,#start')].filter(e=>{const r=e.getBoundingClientRect(),h=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return !(r.width>0&&r.height>0&&r.bottom<=innerHeight&&r.right<=innerWidth&&(h===e||e.contains(h)))}).map(e=>e.id||e.dataset.action);

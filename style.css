@@ -14,3 +14,53 @@ body.in-game{height:100dvh;overflow:hidden}main{max-width:1540px;height:100dvh;m
 @media(prefers-reduced-motion:reduce){button{transition:none}.launch:hover{transform:none}}
 @media(max-height:470px) and (min-width:550px){.landing{padding:12px 22px}.landing-nav{padding-bottom:10px}.landing-grid{grid-template-columns:1fr 1fr;padding:18px 0;gap:25px}.landing-copy{padding:0}.landing-kicker{font-size:9px;margin-bottom:10px}.landing-copy h1{font-size:46px;line-height:1.02;letter-spacing:-2px}.landing-description{font-size:10px;line-height:1.6;margin:12px 0}.launch{min-height:44px;font-size:16px;padding:6px 16px;gap:15px}.launch span{font-size:24px}.landing-hint{font-size:8px;margin-top:10px}.landing-stats{margin-top:12px;gap:18px}.landing-stats strong{font-size:24px}.landing-stats span{font-size:8px}.landing-poster{aspect-ratio:.96}.poster-heading{font-size:8px;left:13px;top:13px}.poster-heading b{font-size:10px}.poster-stamp{padding:5px;bottom:42px}.poster-stamp strong{font-size:14px}.poster-caption{padding:11px;font-size:7px}.landing-guide{grid-template-columns:repeat(3,1fr);gap:15px;padding:14px 0}.landing-guide>div{gap:8px}.landing-guide b{font-size:10px}.landing-guide small{font-size:8px}}
 .music-volume{display:flex;align-items:center;gap:10px;margin:10px 0}.music-volume input{flex:1;min-width:0;accent-color:var(--red)}#music-toggle{padding:6px 12px;border-radius:5px;background:#e6ecd7;font-size:11px}
+/* Single-column, full-width character cards at every breakpoint. */
+#hero-options,#enemy-options{grid-template-columns:minmax(0,1fr)}
+#hero-options button,#enemy-options button{font-size:13px;padding:4px 4px 8px}
+.portrait-photo{display:block;width:100%;height:144px;object-fit:contain;object-position:center top;background:radial-gradient(ellipse at center,#d9e9e8,transparent 72%);border-radius:5px}
+.pause{background:#eaf0dc;border:1px solid #bdcbb1;min-height:32px;border-radius:5px;padding:4px 9px;font-size:11px}
+.pause[aria-pressed=true]{background:#ffe2ae}
+@media(max-width:1000px){.arcade{grid-template-columns:92px minmax(0,1fr) 30px}.portrait-photo{height:104px}.hero-picker .picker-label{font-size:11px}.music-options[open]{width:min(430px,calc(100% - 110px))}}
+@media(max-width:700px){.arcade{grid-template-columns:80px minmax(0,1fr) 28px}#hero-options button{font-size:11px}.portrait-photo{height:88px}.enemy-picker .portrait-photo{height:145px}.control-options{flex-wrap:wrap}.pause{font-size:10px;padding:4px 6px}.music-options[open]{width:calc(100% - 95px)}}
+/* Full-body roster and eight independent touch controls. */
+#hero-toggle{display:none}.portrait-photo.full-body{object-fit:contain;height:170px;background:radial-gradient(ellipse at center,#e7ede3,transparent 70%)}
+.controls{grid-template-columns:repeat(8,minmax(0,1fr))}.movement{display:contents}.control-options{grid-column:1/-1}
+#fullscreen{font:inherit;font-size:11px;padding:6px 9px;border:1px solid #8ca28d;border-radius:6px;background:#f2ead4;color:#233d38;min-height:32px}
+.attack,.fire{border-bottom-color:var(--skill-color,#9ccacc)}
+@media(max-width:700px){.controls{grid-template-columns:repeat(4,minmax(0,1fr))}.portrait-photo.full-body{height:110px}}
+@media(orientation:landscape) and (max-height:600px){
+  body.in-game{background:#182c35;overscroll-behavior:none;touch-action:none}
+  body.in-game main{max-width:none;width:100%;height:100dvh;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  main>header,main>footer,.corner-note{display:none}
+  .arcade{display:block;position:relative;width:100%;height:100%;border:0;border-radius:0;box-shadow:none;background:#d6e3dc}
+  .stage{position:absolute;inset:0 0 72px;width:100%;height:auto;border-radius:0;min-height:0;overflow:hidden;background:#d6e3dc}
+  #game{width:100%;height:100%;object-fit:contain}
+  .statusbar{position:absolute;z-index:3;left:124px;right:260px;top:5px;padding:5px 10px;border:0;background:#fff9e4dc;border-radius:8px;pointer-events:none}
+  .statusbar .status-label,.statusbar .mission{display:none}#health{font-size:15px}#score{font-size:17px}
+  .selection-panel{display:contents}.weather-controls{display:none}
+  .controls{position:absolute;bottom:0;left:0;right:0;height:72px;display:grid;grid-template-columns:repeat(4,minmax(42px,.7fr)) repeat(4,minmax(70px,1.3fr));gap:5px;padding:6px 9px;background:#263d48;border:0}
+  .movement button,.fire,.attack{height:60px;min-height:44px;font-size:14px;touch-action:none;border-radius:8px}
+  .fire.long-label,.attack.long-label{font-size:12px}.controls small{font-size:9px!important}
+  .control-options{position:absolute;bottom:auto;top:calc(-100dvh + 77px + env(safe-area-inset-top) + env(safe-area-inset-bottom));right:8px;display:flex;gap:5px;flex-wrap:nowrap;margin:0;background:#fff9e4e6;border-radius:8px;padding:2px}
+  .control-options button{min-height:30px}.control-options .sound{max-width:none;width:35px;overflow:hidden;white-space:nowrap;font-size:10px;margin:0}.sound small,.restart span{display:none}.music-settings{font-size:10px}
+  #hero-toggle,#enemy-toggle{display:block;position:absolute;z-index:9;top:5px;bottom:auto;width:53px;height:32px;writing-mode:horizontal-tb;border:1px solid #8fa493;border-radius:6px;padding:3px;background:#fff9e9;font-size:12px}
+  #hero-toggle{left:6px}#enemy-toggle{left:64px;right:auto}
+  .hero-picker,.enemy-picker{display:none;position:absolute;z-index:8;top:44px;bottom:78px;width:160px;padding:8px;border:1px solid #728d81;border-radius:8px;box-shadow:0 6px 20px #18342d44;background:#f4f0de;overflow:auto;touch-action:pan-y}
+  .hero-picker{left:6px;right:auto}.enemy-picker{left:64px;right:auto}.heroes-open .hero-picker,.enemies-open .enemy-picker{display:block}
+  .portrait-photo.full-body{height:145px}.music-options[open]{position:absolute;top:42px;right:8px;width:min(420px,80%);max-height:calc(100% - 120px);touch-action:pan-y}
+  .message{max-width:60%;padding:12px 20px}.message h2{font-size:22px}.message p{display:none}.message-icon{display:none}.primary{min-height:44px;padding:8px 22px;font-size:16px}
+}
+.controls>.fire{grid-column:auto}@media(orientation:landscape) and (max-height:600px){.statusbar{background:#fff8e8}.statusbar #health{color:#bd492e}.statusbar #score{color:#304c44}}
+.controls>.attack,.controls>.fire{grid-column:auto}
+
+/* Arcade round flow, mode choice and readable roster introductions. */
+main{max-width:1800px;padding-left:14px;padding-right:14px}.arcade{grid-template-columns:140px minmax(0,1fr) 140px}
+.mode-choice{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:20px 0 12px;padding:0;border:0;max-width:460px}.mode-choice legend{font-size:12px;font-weight:700;margin-bottom:8px}.mode-choice label{display:grid;grid-template-columns:16px 1fr;gap:7px;padding:12px;border:1px solid #aabda4;border-radius:8px;cursor:pointer}.mode-choice label:has(input:checked){border:2px solid var(--red);background:#fff0d3;padding:11px}.mode-choice input{margin:2px 0;accent-color:var(--red)}.mode-choice small{grid-column:1/-1;font-size:10px;line-height:1.6;color:#536952}.mode-choice b{font-size:14px}.landing-music{display:flex;gap:10px;align-items:center;font-size:12px;margin-bottom:18px}.landing-music select{padding:6px 10px;background:#fffaeb;border:1px solid #aabda4;border-radius:5px}
+#home{background:#f4ecd8;border:1px solid #a8b89a;border-radius:5px;min-height:32px;font-size:11px;padding:5px 9px}
+.round-intro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;line-height:1.3;background:linear-gradient(115deg,#102b42d9,#14334b77 48%,#432531bf);color:#fff8de;pointer-events:none;overflow:hidden;z-index:5}.versus{display:flex;align-items:center;justify-content:center;gap:35px;width:100%;font-weight:900;font-size:clamp(20px,3vw,38px);text-shadow:2px 3px #132b3a}.versus span{max-width:35%;text-align:center;animation:versus-in .65s cubic-bezier(.2,.8,.2,1) both}.versus span:last-child{animation-name:versus-right}.versus b{font:italic 900 60px Georgia,serif;color:#ffcf69}.round-intro>strong{font:italic 900 clamp(50px,8vw,94px) Georgia,serif;letter-spacing:8px;color:#ffe8a8;text-shadow:4px 5px #bf3b2d;animation:round-in .4s ease-out both}.round-intro small{font-size:15px;letter-spacing:4px}.round-intro[data-phase=fight]{background:#14263c44}.round-intro[data-phase=fight] .versus{visibility:hidden}.round-intro[data-phase=fight]>strong{color:#fff4b8;animation:fight-in .55s ease-out both}
+.character-info{position:fixed;z-index:100;background:#fff9eafa;border:2px solid #264b40;border-radius:12px;padding:15px 17px;box-shadow:0 10px 35px #112b3c44;pointer-events:none;max-height:calc(100dvh - 24px);overflow:hidden;line-height:1.5}.character-info h3{font-size:18px;margin:0 0 6px}.character-info p{font-size:12px;margin:0 0 10px;color:#536856}.character-info ul{list-style:none;padding:0;margin:0}.character-info li{border-top:1px solid #d5dfc8;padding:6px 0}.character-info b{display:block;font-size:12px;color:#a13c2b}.character-info li span{display:block;font-size:10px;color:#536856}
+@keyframes versus-in{from{transform:translateX(-130px);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes versus-right{from{transform:translateX(130px);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes round-in{from{transform:scale(1.4);opacity:0}to{transform:scale(1);opacity:1}}@keyframes fight-in{from{transform:scale(.65);opacity:0}50%{transform:scale(1.12);opacity:1}to{transform:scale(1);opacity:1}}
+@media(max-width:1000px){.arcade{grid-template-columns:92px minmax(0,1fr) 30px}}
+@media(max-width:700px){.arcade{grid-template-columns:80px minmax(0,1fr) 28px}.mode-choice{max-width:none}.versus{gap:10px;font-size:16px}.versus b{font-size:38px}.round-intro small{font-size:10px}}
+@media(orientation:landscape) and (max-height:600px){.statusbar{right:305px}.control-options{gap:3px}.control-options #home{font-size:10px;padding:3px 6px}.mode-choice{gap:6px;margin:10px 0}.mode-choice label{padding:6px}.mode-choice label:has(input:checked){padding:5px}.mode-choice small{font-size:8px}.landing-music{margin-bottom:10px}.round-intro{gap:7px}.versus{font-size:22px}.versus b{font-size:42px}.round-intro>strong{font-size:68px}.character-info{padding:9px 12px}.character-info p{font-size:10px;margin-bottom:5px}.character-info li{padding:3px 0}}
+@media(prefers-reduced-motion:reduce){.round-intro *{animation:none!important}}

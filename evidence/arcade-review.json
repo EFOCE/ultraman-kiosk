@@ -1,0 +1,110 @@
+{
+  "date": "2026-11-07",
+  "preview": "http://127.0.0.1:4186/",
+  "committed": false,
+  "published": false,
+  "features": {
+    "modes": [
+      "free",
+      "campaign"
+    ],
+    "stages": 14,
+    "attackKeys": [
+      "U",
+      "I",
+      "J",
+      "K"
+    ],
+    "worldWidth": 1500,
+    "canvasWidth": 1300,
+    "passiveContactDamage": false,
+    "fullBodyCharacters": 27,
+    "newMonsterPngs": 11,
+    "voiceClips": 9,
+    "calmMusic": "Peacefull Ville (2023) by Bobjt, CC0"
+  },
+  "assets": {
+    "pngBytes": 54730503,
+    "voiceBytes": 453962,
+    "calmMusicBytes": 608569,
+    "rgbaAlphaChecked": 27,
+    "http200Checked": 38
+  },
+  "tests": {
+    "self-test.mjs": "PASS: 52 skill slots, 182 controlled roster victories/restarts, 14 loss paths and movement/status behavior",
+    "test-boss-xingxing.mjs": "PASS",
+    "test-arcade.mjs": "PASS: keys, 14 contact no-damage cases, telegraphed counter, AI dodge, campaign progression/recovery/loss/duplicate guards",
+    "nodeSyntaxChecks": "PASS: game.mjs, model.mjs, server.cjs",
+    "gitDiffCheck": "PASS"
+  },
+  "browser": {
+    "surface": "dedicated Chrome tab via CUA",
+    "verified": [
+      "Home mode/music selection",
+      "READY/FIGHT intro and pause/resume",
+      "Actual U, I, J, K key activation",
+      "Boss gravity and orbital strike defeat Gomora",
+      "Stage 1 WIN and next-stage text",
+      "Stage 2 selects Buniu in label, roster and canvas description",
+      "Campaign health increases from 2 to 4",
+      "Returning home",
+      "Hero and monster introductions via keyboard focus",
+      "Calm/battle recording switches",
+      "Jump then pause",
+      "No broken loaded roster images",
+      "No console errors at final check"
+    ],
+    "layouts": [
+      {
+        "width": 873,
+        "height": 393,
+        "horizontalOverflow": false,
+        "clippedCombatButtons": []
+      },
+      {
+        "width": 640,
+        "height": 360,
+        "horizontalOverflow": false,
+        "clippedCombatButtons": []
+      },
+      {
+        "width": 393,
+        "height": 873,
+        "horizontalOverflow": false,
+        "clippedCombatButtons": []
+      },
+      {
+        "width": 320,
+        "height": 568,
+        "horizontalOverflow": false,
+        "clippedCombatButtons": []
+      },
+      {
+        "width": 1365,
+        "height": 900,
+        "horizontalOverflow": false,
+        "clippedCombatButtons": []
+      }
+    ],
+    "landscapeStageHeightAt873x393": 321,
+    "viewportOverrideReset": true,
+    "previewTabRetained": true,
+    "screenshots": [
+      "arcade-landscape.jpg",
+      "arcade-landing.jpg",
+      "arcade-character-info.jpg",
+      "arcade-stage-win.jpg",
+      "arcade-intro.jpg"
+    ]
+  },
+  "limitations": [
+    "182 combinations were model tests, not manually completed matches.",
+    "The 14-stage ending is model-tested; browser playtesting covered the first victory and transition to stage 2.",
+    "No Xiaomi 15 Pro hardware, multitouch or speaker listening test.",
+    "Voice clips are bundled synthesized English arcade calls, not film or KOF actor recordings.",
+    "Motion uses a lightweight 2D two-leg puppet, not a complete hand-drawn fighting sprite sheet.",
+    "Wukong animal transformation silhouettes retain their previous Canvas animations.",
+    "Generated high-resolution PNGs are uncompressed; cellular loading performance not measured.",
+    "Legacy verify-*.js/cjs suite not executed."
+  ]
+}

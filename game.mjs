@@ -1,9 +1,47 @@
-import { createGame, step, shoot, attack, setMoveTarget, chooseWeather, WEATHER_NAMES, MAX_HP, ENEMIES } from './model.mjs';
+import { STAGES, createRun, campaignBattle, completeStage } from './campaign.mjs';
+import { FIGHTER_CROPS } from './fighter-art.mjs';
+import { HERO_SKILLS, ENEMY_SKILLS, SKILL_KEYS, ATTACK_KEYS, KEY_ACTIONS, skillDescription } from './combat-kit.mjs';
+import { createGame, step, shoot, attack, jump, setMoveTarget, chooseWeather, WEATHER_NAMES, MAX_HP, ENEMIES, WIDTH } from './model.mjs';
+
+const fighterIds=Object.keys(FIGHTER_CROPS);
+const fighters={};
+function photoFighter(id,x,direction,time,context,flying=false,character={}) {
+  if(!fighterIds.includes(id))return false;
+  if(!fighters[id]){const image=new Image();image.onload=()=>window.dispatchEvent(new Event('character-art-ready'));image.src=`./assets/fighters/${id}.png`;fighters[id]=image;}
+  const image=fighters[id];if(!image.complete||!image.naturalWidth)return false;
+  const [left,top,right,bottom]=FIGHTER_CROPS[id],sw=right-left,sh=bottom-top;
+  const height=['noa','wukong'].includes(id)?275:230,width=height*sw/sh;
+  const crouch=character.poseCrouch||0,air=character.jumpHeight||0;
+  const stride=character.moving&&!reduceMotion?Math.sin(time*12):0;
+  const action=character.actionTime||character.skillEffectTime||0;
+  const strike=!reduceMotion&&action>0?Math.sin(Math.min(1,action/.35)*Math.PI):0;
+  const fly=flying?Math.sin(Math.PI*Math.min(1,(character.flightTime||.6)/1.2))*115:0;
+  context.save();context.translate(x,512);context.scale(direction,1);
+  if(!air){context.fillStyle='#24323e33';context.beginPath();context.ellipse(0,2,38,7,0,0,Math.PI*2);context.fill();}
+  if(character.burrowTime>0){context.fillStyle='#9b8063';context.beginPath();context.ellipse(0,0,45,10,0,0,Math.PI*2);context.fill();context.restore();return true;}
+  context.translate(strike*16,-fly-Math.abs(stride)*3);
+  const recoil=character.hit>0?-0.08:0;
+  context.rotate(recoil+strike*.055+(character.moveVelocity||0)*direction*.00008);
+  if(character.hit>0)context.filter='brightness(1.5)';
+  // shortcut: a lightweight two-leg puppet shares one cutout; use authored pose sheets for detailed limb choreography.
+  const split=.63,upper=height*split,leg=height-upper,drop=crouch*48+(character.landingTime||0)*70;
+  context.drawImage(image,left,top,sw,sh*split,-width/2,-height+drop,width,upper);
+  for(const side of [-1,1]){
+    context.save();context.translate(side*width*.12,-leg+drop);
+    const kick=character.action==='kick'?strike*(side===1?-.65:.18):0;
+    context.rotate(side*stride*.1+crouch*side*.26+(air>0?side*.12:0)+kick);
+    context.drawImage(image,left+(side===1?sw/2:0),top+sh*split,sw/2,sh*(1-split),side===1?-width*.12:-width*.38,0,width/2,Math.max(leg-drop,leg*.4));
+    context.restore();
+  }
+  if(character.moving&&!reduceMotion){context.fillStyle='#e5d2a577';context.beginPath();context.ellipse(-direction*Math.sign(character.moveVelocity||1)*32,0,10+Math.abs(stride)*8,4,0,0,Math.PI*2);context.fill();}
+  context.restore();return true;
+}
 
 const musicSource = document.querySelector('#music-source');
 const musicNote = document.querySelector('#music-note');
 const musicTrack = new Audio(); musicTrack.loop = true; musicTrack.volume = 0.35;
 const battleRecording = './assets/music/battle-theme.mp3';
+const calmRecording='./assets/music/peaceful-ville.mp3';
 let musicURL = '', musicPaused = false;
 const originalRecordings = {
   preview: { id: '1595450868', title: '梦比优斯主题曲', artist: 'Project DMM & ウルトラ防衛隊' },
@@ -34,9 +72,10 @@ const bookMelody=[67,71,74,79,78,74,71,69,67,0,69,71,74,71,69,0,
 const bookBass=[43,50,40,47,48,50,43,43];
 const audio = {
   enabled: true, context: null, master: null, timer: null, voices: new Set(),
-  beat: 0, next: 0, scheduled: 0, effects: 0, lastEffect: '', error: false,
+  beat: 0, next: 0, scheduled: 0, effects: 0, epoch: 0, lastEffect: '', error: false,
   async resume() {
-    if (!this.enabled || document.hidden) return;
+    if (!this.enabled || document.hidden || paused) return;
+    const epoch=this.epoch;
     try {
       if (!this.context) {
         this.context = new (window.AudioContext || window.webkitAudioContext)();
@@ -48,19 +87,21 @@ const audio = {
         };
       }
       await this.context.resume();
+      if(epoch!==this.epoch)return;
       if (!this.enabled || document.hidden) { this.pause(); return; }
-      this.error = false; this.master.gain.value = 0.2;
-      if (!musicPaused && (musicSource.value === 'battle' || (musicSource.value === 'file' && musicURL))) {
-        const source = musicSource.value === 'battle' ? battleRecording : musicURL;
+      this.error = false; this.master.gain.value = 0.2;void voice.load();
+      if (!musicPaused && (['battle','calm'].includes(musicSource.value) || (musicSource.value === 'file' && musicURL))) {
+        const source = musicSource.value === 'battle' ? battleRecording : musicSource.value==='calm'?calmRecording:musicURL;
         if (musicTrack.getAttribute('src') !== source) musicTrack.src = source;
         await musicTrack.play();
+        if(epoch!==this.epoch)return;
       }
       if (!this.enabled || document.hidden) { this.stop(); return; }
       if (this.context.state === 'running' && this.timer === null && ['original','book'].includes(musicSource.value)) {
         this.next = this.context.currentTime + 0.04; this.beat = 0;
         this.schedule(); this.timer = setInterval(() => this.schedule(), 100);
       }
-    } catch { this.error = true; }
+    } catch(error) { if(epoch===this.epoch&&error.name!=='AbortError')this.error=true; }
     updateSoundButton();
   },
   tone(frequency, time, duration, volume, type = 'triangle', end = frequency) {
@@ -97,9 +138,10 @@ const audio = {
       this.scheduled++; this.beat = (this.beat + 1) % notes.length; this.next += eighth;
     }
   },
-  effect(kind) {
+  effect(kind,id=selectedHero,delay=0) {
     if (!this.enabled || document.hidden || this.context?.state !== 'running') return;
-    const t = this.context.currentTime; this.effects++; this.lastEffect = kind;
+    const t = this.context.currentTime+delay; this.effects++; this.lastEffect = id+':'+kind;
+    if(!['win','lose'].includes(kind)){characterSound(this,id,kind,t);return;}
     if (kind === 'fire') this.tone(1000, t, 0.13, 0.14, 'sawtooth', 220);
     if (kind === 'hit') this.tone(300, t, 0.09, 0.23, 'triangle', 85);
     if (kind === 'hurt') this.tone(180, t, 0.22, 0.18, 'sine', 60);
@@ -112,6 +154,7 @@ const audio = {
     }
   },
   stop() {
+    this.epoch++;
     clearInterval(this.timer); this.timer = null;
     musicTrack.pause();
     document.querySelector('#theme-player').replaceChildren();
@@ -126,25 +169,61 @@ const audio = {
   }
 };
 const soundButton = document.querySelector('#sound');
+// Each fighter has a distinct motif, register and timbre; these are original effects, not TV recordings.
+const soundProfiles={
+  ruebe:[330,'triangle',[1,1.25,1.5,2]],seven:[440,'square',[1,1.5,1.25]],zero:[520,'sawtooth',[1,1.5,2]],geed:[190,'sawtooth',[1,1.19,1.5]],
+  mebius:[390,'triangle',[1,1.33,1.67]],nexus:[620,'sine',[1,1.12,1.5]],tregear:[150,'sawtooth',[1,1.06,.75]],noa:[740,'sine',[1,1.5,2.5]],taro:[300,'square',[1,1.33,2]],
+  zhuqingqing:[600,'sine',[1,1.25,1.67]],jiangshuyan:[780,'triangle',[1,1.5,1.25,2]],choumo:[260,'triangle',[1,2,1.33]],boss:[110,'sine',[1,2,3]],
+  empera:[70,'sawtooth',[1,.75,.5]],belial:[90,'square',[1,1.19,.7]],gomora:[85,'triangle',[1,.8,1.2]],tangseng:[360,'sine',[1,1.5,2,1.5]],
+  baltan:[690,'square',[1,.5,1.4]],zetton:[120,'square',[1,1,2]],buniu:[160,'triangle',[1,.67,1]],kingjoe:[220,'square',[1,1.42,2.1]],
+  bemstar:[310,'sawtooth',[1,.6,1.8]],tyrant:[105,'sawtooth',[1,.8,.5]],grandma:[540,'triangle',[1,1.25,.75]],shumo:[205,'square',[1,1.5,.8]],
+  wukong:[480,'triangle',[1,1.5,1.75,2]],xingxing:[880,'sine',[1,1.18,1.5,.75]]
+};
+const voice={buffers:{},loading:null,last:0,active:null,
+  load(){
+    if(!this.loading&&audio.context)this.loading=Promise.all(['ready','fight','winner','ko','ha','hya','take','power','hurt'].map(async name=>{
+      try{const response=await fetch(`./assets/voices/${name}.wav`);if(!response.ok)throw new Error('voice');this.buffers[name]=await audio.context.decodeAudioData(await response.arrayBuffer());}catch{announcement.textContent='配音暂未加载，打击音效仍可使用。';}
+    }));return this.loading;
+  },
+  async play(name,id){
+    if(!audio.enabled||document.hidden||paused)return;
+    await this.load();if(!audio.enabled||document.hidden||paused||audio.context?.state!=='running'||!this.buffers[name])return;
+    const now=audio.context.currentTime,announcer=['ready','fight','winner','ko'].includes(name);
+    if(!announcer&&now-this.last<.32)return;this.last=now;
+    if(this.active)try{this.active.stop();}catch{}
+    const source=audio.context.createBufferSource(),gain=audio.context.createGain();source.buffer=this.buffers[name];
+    const index=Object.keys(soundProfiles).indexOf(id);source.playbackRate.value=announcer?.88:.8+(Math.max(0,index)%8)*.055;
+    gain.gain.value=announcer?2.6:1.9;source.connect(gain);gain.connect(audio.master);this.active=source;audio.voices.add(source);
+    source.onended=()=>{source.disconnect();gain.disconnect();audio.voices.delete(source);if(this.active===source)this.active=null;};source.start();
+  }
+};
+function characterSound(engine,id,kind,t){
+  const [root,wave,notes]=soundProfiles[id]||soundProfiles.ruebe;
+  const entrance=kind==='entrance',warning=kind==='warning';
+  const shift={fire:2,punch:.65,kick:.45,weapon:1.4,hit:.35,hurt:.28,warning:.8}[kind]||1;
+  const length=entrance?.18:warning?.12:.07;
+  (entrance?notes:notes.slice(0,2)).forEach((note,i)=>engine.tone(root*note*shift,t+i*length,length*1.3,entrance?.13:.1,wave,root*note*shift*(warning?1.2:.55)));
+  if(['punch','kick','hit'].includes(kind))engine.tone(90,t,.12,.18,'sine',35);
+}
 function updateSoundButton() {
   const playing = audio.enabled && audio.context?.state === 'running';
   soundButton.setAttribute('aria-pressed', String(playing));
   soundButton.setAttribute('aria-label', playing ? '关闭音乐和音效' : '开启音乐和音效');
   soundButton.querySelector('span').textContent = audio.error ? '♫ 点击重试声音' : playing ? '♫ 声音：开' : audio.enabled ? '♫ 开启声音' : '♫ 声音：关';
-  soundButton.querySelector('small').textContent = musicSource.value === 'battle' ? '热血摇滚 · 循环' : musicSource.value === 'book' ? '书本穿越记 · 器乐' : musicSource.value === 'original' ? '原创备用配乐' : originalRecordings[musicSource.value] ? '音效 / 原声试听' : musicURL ? '本地原声 · 循环' : '音效 / 等待音频';
+  soundButton.querySelector('small').textContent = musicSource.value === 'battle' ? '热血摇滚 · 循环' : musicSource.value==='calm'?'舒缓小镇 · 循环': musicSource.value === 'book' ? '书本穿越记 · 器乐' : musicSource.value === 'original' ? '原创备用配乐' : originalRecordings[musicSource.value] ? '音效 / 原声试听' : musicURL ? '本地原声 · 循环' : '音效 / 等待音频';
   const toggle = document.querySelector('#music-toggle');
   if (toggle) {
-    toggle.hidden = !['battle','file'].includes(musicSource.value); toggle.disabled = musicSource.value === 'file' && !musicURL;
+    toggle.hidden = !['battle','calm','file'].includes(musicSource.value); toggle.disabled = musicSource.value === 'file' && !musicURL;
     toggle.textContent = musicTrack.paused ? '播放配乐' : '暂停配乐';
     toggle.setAttribute('aria-pressed', String(!musicTrack.paused));
   }
   const volume = document.querySelector('.music-volume');
-  if (volume) volume.hidden = !['battle','file'].includes(musicSource.value);
+  if (volume) volume.hidden = !['battle','calm','file'].includes(musicSource.value);
   const credit = document.querySelector('#music-credit'), recording = originalRecordings[musicSource.value];
-  if (credit) credit.textContent = musicSource.value === 'battle' ? 'JRPG Epic Rock Battle Theme #1 · HydroGene · 完整摇滚录音' : recording ? recording.title + ' · ' + recording.artist + ' · 官方原声' : musicSource.value === 'file' ? '导入你已有的原声音频，完整循环，文件仅留在本机。' : '原创合成器乐 · 非影视原声';
+  if (credit) credit.textContent = musicSource.value === 'battle' ? 'JRPG Epic Rock Battle Theme #1 · HydroGene · 完整摇滚录音' : musicSource.value==='calm'?'Peacefull Ville · Bobjt · CC0 舒缓录音':recording ? recording.title + ' · ' + recording.artist + ' · 官方原声' : musicSource.value === 'file' ? '导入你已有的原声音频，完整循环，文件仅留在本机。' : '原创合成器乐 · 非影视原声';
   document.querySelector('#preview-note').hidden = !recording;
   document.querySelector('#official-music-link').hidden = !recording;
-  document.querySelector('#battle-credit-link').hidden = musicSource.value !== 'battle';
+  const creditLink=document.querySelector('#battle-credit-link');creditLink.hidden=!['battle','calm'].includes(musicSource.value);creditLink.href=musicSource.value==='calm'?'https://opengameart.org/content/peacefull-ville':'https://opengameart.org/content/jrpg-epic-rock-battle-theme-1';creditLink.textContent=musicSource.value==='calm'?'音乐：Bobjt · CC0 ↗':'音乐：HydroGene · CC0 ↗';
 }
 soundButton.addEventListener('click', () => {
   if (audio.enabled && audio.context?.state === 'running') {
@@ -188,13 +267,13 @@ musicTrack.addEventListener('pause', updateSoundButton);
 updateSoundButton();
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) audio.pause();
-  else if (audio.context && audio.enabled) void audio.resume();
+  else if (audio.context && audio.enabled && !paused) void audio.resume();
 });
 
 const canvas = document.querySelector('#game');
 const ctx = canvas.getContext('2d');
 export const background = document.createElement('canvas');
-background.width = canvas.width; background.height = canvas.height;
+background.width = 1100; background.height = canvas.height;
 let c = background.getContext('2d');
 const ink = '#29493e';
 function box(x, y, w, h, color, radius = 0, stroke = null) {
@@ -413,6 +492,14 @@ function monsterSurfaceDetails(id) {
   }
 }
 export function hero(character, time, context = ctx) {
+  if(character.jumpHeight>0){context.save();context.fillStyle='#24323e22';context.beginPath();context.ellipse(character.x,514,Math.max(16,38-character.jumpHeight/10),6,0,0,Math.PI*2);context.fill();context.restore();}
+  context.save();context.translate(character.x,512-(character.jumpHeight||0));
+  if(character.crouching&&!fighterIds.includes(character.id))context.scale(1.08,.62);
+  context.translate(-character.x,-512);
+  drawStandingHero(character,time,context);context.restore();
+}
+function drawStandingHero(character, time, context = ctx) {
+  if(photoFighter(character.id,character.x,character.dir,time,context,false,character))return;
   const previousContext = c; c = context;
   const ink = '#24323e';
   c.save(); c.translate(character.x, 512); c.scale(character.dir, 1);
@@ -730,6 +817,12 @@ export function monster(enemy, time, playerX, context = ctx) {
   const previousContext = c; c = context;
   const ink = '#26313a';
   const id = enemy.id, info = ENEMIES[id];
+  c.save();c.translate(0,-(enemy.jumpHeight||0));
+  const hasPhoto=!(id==='wukong'&&enemy.formTime>0)&&photoFighter(id,enemy.x,playerX<enemy.x?-1:1,time,c,enemy.flightTime>0,enemy);c.restore();
+  if(hasPhoto){
+    if(enemy.hp!==undefined){label(info.name,enemy.x,255,15);box(enemy.x-45,266,90,8,'#fff3d0',4,ink);box(enemy.x-43,268,86*enemy.hp/info.hp,4,'#b72d59',2);}
+    c=previousContext;return;
+  }
   if (id === 'shumo') {
     c.save();c.translate(enemy.x,512);c.scale(playerX<enemy.x?-1:1,1);
     if(enemy.slipTime>0)c.rotate(-0.85);c.translate(0,-512);
@@ -941,14 +1034,14 @@ export function monster(enemy, time, playerX, context = ctx) {
   c = previousContext;
 }
 
-export const heroNames = { ruebe: '罗布', seven: '赛文', zero: '赛罗', geed: '捷德', mebius: '梦比优斯', nexus: '奈克瑟斯', tregear: '托雷吉亚', zhuqingqing: '朱青青', noa:'诺亚', jiangshuyan:'蒋书妍', taro:'泰罗', choumo:'臭墨' };
-const heroTitle = id => heroNames[id] + (['zhuqingqing','jiangshuyan','choumo'].includes(id) ? '' : '奥特曼');
+export const heroNames = { ruebe: '罗布', seven: '赛文', zero: '赛罗', geed: '捷德', mebius: '梦比优斯', nexus: '奈克瑟斯', tregear: '托雷吉亚', zhuqingqing: '朱青青', noa:'诺亚', jiangshuyan:'蒋书妍', taro:'泰罗', choumo:'臭墨', boss:'Boss' };
+const heroTitle = id => heroNames[id] + (['boss','zhuqingqing','jiangshuyan','choumo'].includes(id) ? '' : '奥特曼');
 let selectedHero = 'ruebe';
 let selectedEnemy = 'empera';
 let game = createGame(selectedHero, selectedEnemy); game.status = 'ready';
 const keys = new Set();
 const pointers = new Map();
-const keyActions = { ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right', Space: 'fire', KeyJ: 'fire', KeyZ: 'punch', KeyX: 'kick', KeyC: 'weapon' };
+const keyActions=KEY_ACTIONS;
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const message = document.querySelector('#message');
 const title = document.querySelector('#message-title');
@@ -957,7 +1050,34 @@ const start = document.querySelector('#start');
 const health = document.querySelector('#health');
 const score = document.querySelector('#score');
 const announcement = document.querySelector('#announcement');
-let lastHp = -1, lastEnemyHp = -1, lastCooldown = 0, lastAction = 0, lastWarning = 0;
+let lastHp = -1, lastEnemyHp = -1, lastCooldown = 0, lastAction = 0, lastWarning = 0, lastEnemyAction=0;
+let endingTime=0, endingStarted=false, paused=false, introTime=0, hitFreeze=0, impactTime=0;
+let mode='free',run=createRun();
+const intro=document.querySelector('#round-intro');
+const pauseButton=document.createElement('button');pauseButton.className='pause';pauseButton.textContent='暂停';pauseButton.type='button';pauseButton.setAttribute('aria-pressed','false');
+document.querySelector('.control-options').prepend(pauseButton);
+const fullscreenButton=document.querySelector('#fullscreen');
+async function fullscreen(){
+  try{
+    if(document.fullscreenElement){await document.exitFullscreen();return;}
+    if(!document.documentElement.requestFullscreen){announcement.textContent='浏览器不支持全屏，已使用最大可用战斗区域。';return;}
+    await document.documentElement.requestFullscreen({navigationUI:'hide'});
+    if(screen.orientation?.lock)try{await screen.orientation.lock('landscape');}catch{}
+  }catch{announcement.textContent='请直接点击全屏按钮进入全屏。';}
+}
+fullscreenButton.addEventListener('click',fullscreen);
+document.addEventListener('fullscreenchange',()=>{fullscreenButton.textContent=document.fullscreenElement?'退出全屏':'⛶ 全屏';fullscreenButton.setAttribute('aria-pressed',String(!!document.fullscreenElement));clearInput();});
+window.addEventListener('game-enter',()=>{if(matchMedia('(orientation:landscape) and (max-height:600px)').matches)void fullscreen();});
+const heroToggle=document.querySelector('#hero-toggle');
+function closeRoster(){document.querySelector('.arcade').classList.remove('heroes-open','enemies-open');heroToggle.setAttribute('aria-expanded','false');document.querySelector('#enemy-toggle').setAttribute('aria-expanded','false');}
+heroToggle.addEventListener('click',()=>{const opened=document.querySelector('.arcade').classList.toggle('heroes-open');heroToggle.setAttribute('aria-expanded',String(opened));if(game.status==='playing')setPaused(true);});
+window.addEventListener('resize',clearInput);
+function setPaused(value){
+  paused=value;clearInput();pauseButton.textContent=value?'继续':'暂停';pauseButton.setAttribute('aria-pressed',String(value));
+  if(value)audio.pause();else if(game.status==='playing')void audio.resume();
+}
+pauseButton.addEventListener('click',()=>{if(game.status==='playing')setPaused(!paused);});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&game.status==='playing')setPaused(true);});
 const weatherChoice = document.querySelector('#weather');
 function applyWeather() {
   game.weather = chooseWeather(weatherChoice.value); game.weatherStartedAt = game.time;
@@ -970,23 +1090,45 @@ function clearInput() {
   game.hero.moveTarget = null;
   document.querySelectorAll('.held').forEach(button => button.classList.remove('held'));
 }
-function restart() {
-  void audio.resume();
+function restart(advance=false) {
+  if(mode==='campaign'){
+    if(advance&&game.status==='won'){completeStage(run,game);if(run.cleared)run=createRun();}
+    if(game.status==='lost')run.health=MAX_HP;
+    selectedEnemy=STAGES[run.stage];
+  }
+  endingTime=0;endingStarted=false;setPaused(false);
+  void audio.resume().then(()=>{audio.effect('entrance',selectedHero);audio.effect('entrance',selectedEnemy,.55);});
   lastHp = lastEnemyHp = -1; lastCooldown = 0;
-  lastAction = lastWarning = 0;
-  clearInput(); game = createGame(selectedHero, selectedEnemy); message.hidden = true;
+  lastAction = lastWarning = lastEnemyAction = 0;
+  clearInput(); game = mode==='campaign'?campaignBattle(run,selectedHero):createGame(selectedHero, selectedEnemy); message.hidden = true;
+  introTime=2.6;hitFreeze=impactTime=0;intro.hidden=false;intro.dataset.phase='ready';
+  document.querySelector('#intro-hero').textContent=heroNames[selectedHero];document.querySelector('#intro-enemy').textContent=ENEMIES[selectedEnemy].name;
+  document.querySelector('#round-call').textContent='READY';document.querySelector('#round-subtitle').textContent=mode==='campaign'?`第 ${run.stage+1} / ${STAGES.length} 关`:'自由对战';
+  document.querySelector('#mode-label').textContent=mode==='campaign'?`闯关 ${run.stage+1} / ${STAGES.length}`:'自由对战';
+  document.querySelector('#opponent-name').textContent=ENEMIES[selectedEnemy].name;
+  document.querySelectorAll('[data-enemy]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.enemy===selectedEnemy)));
+  canvas.setAttribute('aria-label',`${heroTitle(selectedHero)}在小卖部门口迎战${ENEMIES[selectedEnemy].name}。U I J K 出招，W 跳跃，S 下蹲。`);
+  void audio.resume().then(()=>voice.play('ready'));
   applyWeather();
+  closeRoster();
   document.querySelector('.arcade').classList.remove('enemies-open');
   document.querySelector('#enemy-toggle').setAttribute('aria-expanded','false');
   announcement.textContent = `游戏开始。击退${ENEMIES[selectedEnemy].name}，守护小卖部！`;
   updateStatus();
 }
 function ready() {
+  introTime=0;intro.hidden=true;hitFreeze=impactTime=0;
+  if(mode==='campaign')selectedEnemy=STAGES[run.stage];
+  document.querySelector('#mode-label').textContent=mode==='campaign'?`闯关 ${run.stage+1} / ${STAGES.length}`:'自由对战';
+  document.querySelectorAll('[data-enemy]').forEach(button=>button.setAttribute('aria-disabled',String(mode==='campaign')));
+  document.querySelector('.enemy-picker .picker-label small').textContent=mode==='campaign'?'依次挑战 · 14 关':'十四位任选';
+  endingTime=0;endingStarted=false;setPaused(false);
   lastHp = lastEnemyHp = -1; lastCooldown = 0;
-  lastAction = lastWarning = 0;
+  lastAction = lastWarning = lastEnemyAction = 0;
   clearInput(); game = createGame(selectedHero, selectedEnemy); game.status = 'ready';
   applyWeather();
   const name = heroTitle(selectedHero);
+  announcement.textContent=`已选择${name}，对手${ENEMIES[selectedEnemy].name}。点击开始守护。`;
   document.querySelectorAll('[data-hero]').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.hero === selectedHero)));
   document.querySelectorAll('[data-enemy]').forEach(item => item.setAttribute('aria-pressed', String(item.dataset.enemy === selectedEnemy)));
   document.querySelector('#hero-name').textContent = name;
@@ -999,50 +1141,50 @@ function ready() {
   start.innerHTML = '开始守护 <span>→</span>'; message.hidden = false; updateStatus();
 }
 function updateStatus() {
-  if (game.actionSerial > lastAction) audio.effect(game.hero.action);
-  if (game.warnings > lastWarning) audio.effect('warning');
+  if (game.actionSerial > lastAction){audio.effect(game.hero.action);voice.play(game.hero.action==='fire'?'power':game.hero.action==='weapon'?'take':'ha',selectedHero);}
+  if (game.warnings > lastWarning) audio.effect('warning',selectedEnemy);
+  if(game.enemyActionSerial>lastEnemyAction){audio.effect('weapon',selectedEnemy);voice.play('hya',selectedEnemy);}
+  lastEnemyAction=game.enemyActionSerial;
   lastAction = game.actionSerial; lastWarning = game.warnings;
-  const special=game.hero.id==='noa'||game.hero.id==='ruebe';
-  const skills = game.hero.id === 'noa'
-    ? [['fire','','诺亚之翼','6秒冷却','展开光翼保护1.2秒，近身击退'],['punch','','闪现','3.5秒冷却','沿朝向瞬移210距离，保护0.35秒'],['kick','','雷电','2秒冷却','前方480距离落雷，伤害3'],['weapon','','头标','1秒冷却','头顶发射光标，伤害2']]
-    : game.hero.id === 'ruebe'
-    ? [['fire','','变身萝卜','7秒冷却','变成卡通萝卜并保护2.2秒，到时恢复'],['punch','','萝卜刀','0.9秒冷却','召唤萝卜刀当武器，前方165范围挥砍伤害3'],['kick','','头波','0.8秒冷却','头顶发射光标，伤害2'],['weapon','','定身','5秒冷却','前方发射定身光环，命中伤害1并暂停1.3秒']]
-    : game.hero.id === 'jiangshuyan'
-    ? [['punch','Z','拖延作业','7秒冷却','暂停怪兽行动和蓄力1.5秒；已发出的光弹继续飞行'],['kick','X','流鼻涕','1.4秒冷却','卡通黏液弹伤害1，命中后移速降至45%，持续2.5秒'],['weapon','C','滑冰','2.8秒冷却','面向的方向滑行0.32秒，约208距离，无无敌效果']]
-    : game.hero.id === 'choumo'
-    ? [['punch','Z','眼泪水花','5秒冷却','眼部向前喷射300距离，命中伤害1并滑倒0.9秒'],['kick','X','臭脚丫','1.1秒冷却','前方145范围伤害2并击退180'],['weapon','C','发射臭虫','2.4秒冷却','从头顶发射卡通小虫，直线前进，伤害2']]
-    : [['punch','Z','快拳','近身','近身快拳'],['kick','X','踢腿','击退','踢腿击退'],['weapon','C','能量飞刃','2.4秒冷却','能量飞刃']];
-  for (const [kind, key, name, hint, description] of skills) {
-    const button = document.querySelector(`[data-action=${kind}]`), remaining = game.hero[kind==='fire'?'cooldown':kind + 'Cooldown'];
-    button.firstChild.textContent = name; button.title = description;
-    button.setAttribute('aria-label', special||['jiangshuyan','choumo'].includes(game.hero.id) ? name : description);
-    button.classList.toggle('long-label', name.length >= 3 && (special||['jiangshuyan','choumo'].includes(game.hero.id)));
-    button.classList.toggle('cooling', remaining > 0);
-    button.querySelector('small').textContent = remaining > 0 ? `${remaining.toFixed(1)}秒` : hint;
+  for(const kind of SKILL_KEYS){
+    const skill=HERO_SKILLS[game.hero.id][kind],button=document.querySelector(`[data-action=${kind}]`);
+    const remaining=Math.max(0,game.hero[kind==='fire'?'cooldown':kind+'Cooldown']);
+    if(button.dataset.skill!==skill.name){button.dataset.skill=skill.name;button.firstChild.textContent=skill.name;button.title=skillDescription(skill);button.setAttribute('aria-label',skill.name);button.style.setProperty('--skill-color',skill.color);}
+    button.classList.toggle('long-label',skill.name.length>=4);button.classList.toggle('cooling',remaining>0);
+    const hint=remaining>0?`${remaining.toFixed(1)}秒`:`${ATTACK_KEYS[kind]} · ${skill.cooldown}秒`;
+    if(button.querySelector('small').textContent!==hint)button.querySelector('small').textContent=hint;
   }
-  if(!special){const fire=document.querySelector('[data-action=fire]');fire.firstChild.textContent='✦ 光线 ';fire.querySelector('small').textContent='按住连续发射';fire.title='发射光线';fire.setAttribute('aria-label','发射光线');fire.classList.remove('long-label','cooling');}
-  if (!special && game.status === 'playing' && game.hero.cooldown > lastCooldown) audio.effect('fire');
+  if(['jiangshuyan','choumo'].includes(game.hero.id)&&game.status==='playing'&&game.hero.cooldown>lastCooldown)audio.effect('fire');
   lastCooldown = game.hero.cooldown;
   if (game.hp !== lastHp) {
-    if (game.hp < lastHp) audio.effect('hurt');
+    if (game.hp < lastHp){audio.effect('hurt');voice.play('hurt',selectedHero);hitFreeze=.065;impactTime=.18;}
     health.textContent = '♥ '.repeat(game.hp) + '♡ '.repeat(MAX_HP - game.hp);
     health.setAttribute('aria-label', `生命 ${game.hp} / ${MAX_HP}`);
-    if (lastHp >= 0 && game.hp < lastHp) announcement.textContent = `受到碰撞，剩余 ${game.hp} 点能量。`;
+    if (lastHp >= 0 && game.hp < lastHp) announcement.textContent = `受到攻击，剩余 ${game.hp} 点能量。`;
     lastHp = game.hp;
   }
   const enemyHp = game.monsters[0]?.hp || 0;
   if (enemyHp !== lastEnemyHp) {
-    if (enemyHp < lastEnemyHp) audio.effect('hit');
+    if (enemyHp < lastEnemyHp){audio.effect('hit',selectedEnemy);voice.play('hurt',selectedEnemy);hitFreeze=.065;impactTime=.18;}
     score.innerHTML = `${enemyHp} <small>/ ${ENEMIES[selectedEnemy].hp}</small>`;
     lastEnemyHp = enemyHp;
   }
 }
-start.addEventListener('click', restart);
+start.addEventListener('click',()=>restart(true));
 document.querySelector('#enemy-toggle').addEventListener('click',()=>{
   const open=document.querySelector('.arcade').classList.toggle('enemies-open');
+  if(open&&game.status==='playing')setPaused(true);
   document.querySelector('#enemy-toggle').setAttribute('aria-expanded',String(open));
 });
 new ResizeObserver(()=>document.querySelector('.arcade').style.setProperty('--controls-height',document.querySelector('.controls').getBoundingClientRect().height+'px')).observe(document.querySelector('.controls'));
+let cameraTop=0,cameraX=0;
+new ResizeObserver(()=>{
+  const rect=document.querySelector('.stage').getBoundingClientRect();
+  const landscape=matchMedia('(orientation:landscape) and (max-height:600px)').matches;
+  const height=landscape&&rect.width?Math.round(Math.max(440,Math.min(590,canvas.width*rect.height/rect.width))):590;
+  if(canvas.height!==height)canvas.height=height;
+  cameraTop=590-height;
+}).observe(document.querySelector('.stage'));
 for (const [id, name] of Object.entries(heroNames)) {
   const button = document.createElement('button');
   button.dataset.hero = id; button.setAttribute('aria-label', `选择${heroTitle(id)}`);
@@ -1050,11 +1192,12 @@ for (const [id, name] of Object.entries(heroNames)) {
   const portrait = document.createElement('canvas'); portrait.width = 140; portrait.height = 130;
   portrait.setAttribute('aria-hidden', 'true');
   const pc = portrait.getContext('2d'); pc.translate(68, 120); const portraitScale = id === 'noa' ? 0.51 : 0.63; pc.scale(portraitScale, portraitScale); pc.translate(0, -512);
-  hero({ id, x: 0, dir: 1, moving: false, firing: 0, invincible: 0 }, 0, pc);
+  if(!fighterIds.includes(id))hero({ id, x: 0, dir: 1, moving: false, firing: 0, invincible: 0 }, 0, pc);
   const text = document.createElement('span'); text.textContent = name;
-  button.append(portrait, text); document.querySelector('#hero-options').append(button);
+  const photo=fighterIds.includes(id)?new Image():null;if(photo){photo.alt='';photo.className='portrait-photo full-body';photo.loading='lazy';photo.src=`./assets/fighters/${id}.png`;}
+  button.append(photo||portrait, text); document.querySelector('#hero-options').append(button);
   button.addEventListener('click', () => {
-    selectedHero = id; ready();
+    selectedHero = id; ready();closeRoster();
   });
 }
 for (const [id, info] of Object.entries(ENEMIES)) {
@@ -1064,51 +1207,92 @@ for (const [id, info] of Object.entries(ENEMIES)) {
   const portrait = document.createElement('canvas'); portrait.width = 150; portrait.height = 150;
   portrait.setAttribute('aria-hidden', 'true');
   const pc = portrait.getContext('2d'); pc.translate(75, 138); const portraitScale = id === 'wukong' ? 0.63 : 0.7; pc.scale(portraitScale, portraitScale); pc.translate(0, -512);
-  monster({ id, x: 0, hit: 0 }, 0, 1, pc);
+  if(!fighterIds.includes(id))monster({ id, x: 0, hit: 0 }, 0, 1, pc);
   const text = document.createElement('span'); text.textContent = info.name;
   if (id === 'belial') { text.textContent += ' ★'; button.title = '远程强敌：24点能量，保持距离发射强化光弹；红色蓄力提示时移动躲避。'; }
   if (id === 'wukong') { text.textContent += ' ★'; button.title = '厚血强敌：40点能量；飞天、遁地、七十二变和金箍棒。看准预警移动，等待落地反击。'; }
-  button.append(portrait, text); document.querySelector('#enemy-options').append(button);
-  button.addEventListener('click', () => { selectedEnemy = id; ready();document.querySelector('.arcade').classList.remove('enemies-open');document.querySelector('#enemy-toggle').setAttribute('aria-expanded','false'); });
+  if(id==='xingxing')button.title='30点能量：流星雨、石化、伸长利爪、快速飞行。看到红色预警后移动躲避。';
+  const photo=fighterIds.includes(id)?new Image():null;if(photo){photo.alt='';photo.className='portrait-photo full-body';photo.loading='lazy';photo.src=`./assets/fighters/${id}.png`;}
+  button.append(photo||portrait, text); document.querySelector('#enemy-options').append(button);
+  button.addEventListener('click', () => { if(mode==='campaign')return;selectedEnemy = id; ready();document.querySelector('.arcade').classList.remove('enemies-open');document.querySelector('#enemy-toggle').setAttribute('aria-expanded','false'); });
 }
-document.querySelector('#restart').addEventListener('click', restart);
+window.addEventListener('game-enter',()=>{
+  mode=document.querySelector('[name="game-mode"]:checked').value;run=createRun();
+  musicSource.value=document.querySelector('#landing-music').value;audio.stop();void audio.resume();updateSoundButton();ready();
+});
+document.querySelector('#home').addEventListener('click',()=>{
+  clearInput();introTime=0;intro.hidden=true;audio.pause();game.status='ready';
+  document.querySelector('#game-shell').hidden=true;document.querySelector('#game-shell').inert=true;
+  document.querySelector('#landing').hidden=false;document.body.classList.remove('in-game');document.querySelector('#landing-start').focus();
+});
+const bios={
+  ruebe:'罗索与布鲁融合的战士，以光轮和漩涡能量协力守护。',seven:'来自光之国的观察者，头镖与额头光线是标志性武器。',zero:'赛文之子，擅长双头镖与迅猛的空中格斗。',geed:'以自己的意志选择正义，爆发光线与近身格斗兼备。',mebius:'年轻的宇宙警备队战士，使用梦比姆气息释放光线与光剑。',nexus:'将光传递给适能者的战士，以武装和美塔领域迎敌。',tregear:'游走光暗之间的奥特曼，擅长电弧、利爪和空间穿梭。',noa:'传说中的银色巨人，拥有诺亚之翼与强大的光之力量。',taro:'宇宙警备队教官，以斯特利姆光线和奥特炸弹迎战。',
+  zhuqingqing:'温柔可靠的青光守护者，擅长防护、治愈与回旋光刃。',jiangshuyan:'聪明活泼的冰晶少女，用暂停、黏液与滑步打乱对手。',choumo:'古灵精怪的小英雄，用泡泡、眼泪与臭虫创造反击机会。',boss:'掌握时空与引力的指挥官，用控制和轨道轰击主宰战场。',
+  empera:'黑暗宇宙的皇帝，重装之下藏着强大远程能量。',belial:'堕入黑暗的奥特战士，手持终极战斗仪发动强力横扫。',gomora:'拥有强壮尾巴与掘地能力的古代怪兽，近身威胁极大。',tangseng:'慈悲又坚定的取经人，以经文、护盾和禅杖化解对手。',baltan:'来自宇宙的忍者，巨大双钳释放破坏光线，也擅长分身。',zetton:'神秘的宇宙恐龙，火球、屏障和瞬间移动攻守兼备。',buniu:'力气惊人的牛角守卫，擅长冲锋与重蹄震波。',kingjoe:'由佩丹星科技打造的重装机器人，机械拳与光线十分强劲。',bemstar:'腹部拥有吸收器官的宇宙大怪兽，护盾期间不要浪费光线。',tyrant:'集合多种怪兽力量的暴君，火焰与铁锤锁链覆盖远近距离。',grandma:'街角的茶香高手，飞拖鞋准头十足，热茶还能让对手慢下来。',shumo:'红晶暗影少年，利用利爪、臭虫与换位寻找进攻机会。',wukong:'齐天大圣，40 点能量；飞天、遁地、七十二变和金箍棒样样精通。',xingxing:'30 点能量的星光猎手，拥有流星雨、石化凝视与超长利爪。'
+};
+const infoCard=document.querySelector('#character-info');
+function showCharacterInfo(button){
+  const id=button.dataset.hero||button.dataset.enemy,isHero=!!button.dataset.hero;
+  const skills=isHero?Object.values(HERO_SKILLS[id]):ENEMY_SKILLS[id];
+  infoCard.replaceChildren();const name=document.createElement('h3');name.textContent=isHero?heroTitle(id):ENEMIES[id].name;
+  const description=document.createElement('p');description.textContent=bios[id];
+  const list=document.createElement('ul');skills.forEach((skill,i)=>{const row=document.createElement('li');const strong=document.createElement('b');strong.textContent=(isHero?Object.values(ATTACK_KEYS)[i]+' · ':'')+skill.name;const detail=document.createElement('span');detail.textContent=skillDescription(isHero?skill:{...skill,cooldown:Number((skill.cooldown*.74).toFixed(2))});row.append(strong,detail);list.append(row);});infoCard.append(name,description,list);infoCard.hidden=false;
+  const rect=button.getBoundingClientRect(),width=Math.min(320,innerWidth-24);infoCard.style.width=width+'px';
+  infoCard.style.left=Math.max(12,Math.min(innerWidth-width-12,rect.left<innerWidth/2?rect.right+10:rect.left-width-10))+'px';
+  infoCard.style.top=Math.max(12,Math.min(innerHeight-infoCard.offsetHeight-12,rect.top))+'px';
+}
+for(const button of document.querySelectorAll('[data-hero],[data-enemy]')){
+  button.setAttribute('aria-describedby','character-info');button.title='';
+  button.addEventListener('pointerenter',event=>{if(event.pointerType==='mouse')showCharacterInfo(button);});
+  button.addEventListener('pointerleave',()=>infoCard.hidden=true);
+  button.addEventListener('focus',()=>showCharacterInfo(button));button.addEventListener('blur',()=>infoCard.hidden=true);
+  button.addEventListener('click',()=>infoCard.hidden=true);
+}
+window.addEventListener('resize',()=>infoCard.hidden=true);document.addEventListener('keydown',e=>{if(e.key==='Escape')infoCard.hidden=true;});
+document.querySelector('#restart').addEventListener('click',()=>restart());
 function triggerAction(action) {
+  if(paused||introTime>0)return;
+  if(action==='jump'){jump(game);return;}
+  if(['left','right','crouch'].includes(action))return;
   if (action === 'fire') shoot(game);
   else attack(game, action);
   updateStatus();
 }
 window.addEventListener('keydown', event => {
   if (event.target.matches('input,select,textarea')) return;
+  if(document.querySelector('#game-shell').hidden)return;
+  if(event.code==='Escape'&&game.status==='playing'&&!document.querySelector('.music-options').open){setPaused(!paused);return;}
+  if(paused||introTime>0)return;
   if (event.code === 'KeyR' && !event.repeat) restart();
   if (!keyActions[event.code] || game.status !== 'playing') return;
   event.preventDefault(); keys.add(event.code);
-  if (!event.repeat && !['left','right'].includes(keyActions[event.code])) triggerAction(keyActions[event.code]);
+  if (!event.repeat && !['left','right','crouch'].includes(keyActions[event.code])) triggerAction(keyActions[event.code]);
 });
 window.addEventListener('keyup', event => keys.delete(event.code));
 window.addEventListener('blur', clearInput);
 window.addEventListener('pointerout', event => { if (!event.relatedTarget) clearInput(); });
 document.addEventListener('visibilitychange', clearInput);
 canvas.addEventListener('pointerdown', event => {
-  if (event.button !== 0 || game.status !== 'playing') return;
+  if (paused || introTime>0 || event.button !== 0 || game.status !== 'playing') return;
   const rect=canvas.getBoundingClientRect(), scale=Math.min(rect.width/canvas.width,rect.height/canvas.height);
-  const x=(event.clientX-rect.left-(rect.width-canvas.width*scale)/2)/scale;
-  const y=(event.clientY-rect.top-(rect.height-canvas.height*scale)/2)/scale;
-  if(x>=0&&x<=canvas.width&&y>=492&&y<=canvas.height){clearInput();setMoveTarget(game,x);}
+  const x=(event.clientX-rect.left-(rect.width-canvas.width*scale)/2)/scale+cameraX;
+  const y=(event.clientY-rect.top-(rect.height-canvas.height*scale)/2)/scale+cameraTop;
+  if(x>=0&&x<=WIDTH&&y>=492&&y<=590){clearInput();setMoveTarget(game,x);}
 });
 document.querySelectorAll('[data-action]').forEach(button => {
   button.addEventListener('pointerdown', event => {
-    if (game.status !== 'playing' || event.button !== 0) return;
+    if (paused || introTime>0 || game.status !== 'playing' || event.button !== 0) return;
     event.preventDefault(); button.setPointerCapture(event.pointerId);
     pointers.set(event.pointerId, button.dataset.action); button.classList.add('held');
     if (['left','right'].includes(button.dataset.action)) game.hero.moveTarget = null;
-    if (!['left','right'].includes(button.dataset.action)) triggerAction(button.dataset.action);
+    if (!['left','right','crouch'].includes(button.dataset.action)) triggerAction(button.dataset.action);
   });
   const release = event => { pointers.delete(event.pointerId); button.classList.remove('held'); };
   button.addEventListener('pointerup', release);
   button.addEventListener('pointercancel', release);
   button.addEventListener('lostpointercapture', release);
   button.addEventListener('click', event => {
-    if (event.detail === 0 && game.status === 'playing') {
+    if (!paused && introTime===0 && event.detail === 0 && game.status === 'playing') {
       step(game, { [button.dataset.action]: true }, 0.05); updateStatus();
     }
   });
@@ -1116,6 +1300,16 @@ document.querySelectorAll('[data-action]').forEach(button => {
 
 function drawBug(x,y,direction) {
   c.save();c.translate(x,y);c.scale(direction,1);oval(-6,-4,7,4,'#f2e6bb');oval(-6,4,7,4,'#f2e6bb');oval(1,0,10,7,'#c98e4e',ink);oval(7,-3,3,3,'#fff4cf',ink);line([[7,-7],[11,-12]],ink,2);c.restore();
+}
+function drawSkillShot(shot){
+  const color=shot.color||'#a9d6ff',y=shot.y||420;
+  c.save();c.translate(shot.x,y);c.scale(shot.dir||1,1);c.shadowColor=color;c.shadowBlur=12;
+  if(shot.vortex){for(const offset of [-32,0,32])oval(offset,0,22,28,'#ffda7144',color);line([[-70,0],[25,0]],'#fff4bf',8);}
+  else if(shot.kind==='blade'){
+    for(const offset of shot.double?[-14,14]:[0]){c.save();c.translate(0,offset);c.rotate(game.time*16);poly([[-24,-7],[3,-18],[25,0],[3,5],[-10,20],[-4,2]],color,'#f4ffff');c.restore();}
+  }else if(shot.kind==='lightning'){line([[-85,0],[-65,-8],[-42,5],[-20,-7],[15,0]],color,9);line([[-85,0],[-65,-8],[-42,5],[-20,-7],[15,0]],'#fff',3);}
+  else{line([[-85,0],[14,0]],color,16);line([[-75,0],[20,0]],'#fffbe8',5);oval(12,0,10,10,'#fffbe8');}
+  c.restore();
 }
 function drawWeather() {
   const t=reduceMotion?0:game.time-game.weatherStartedAt, type=game.weather;
@@ -1147,13 +1341,23 @@ function drawWeather() {
   c.restore();
 }
 function draw() {
-  c.drawImage(background, 0, 0);
+  const targetX=Math.max(0,Math.min(WIDTH-canvas.width,game.hero.x-canvas.width*.4));
+  cameraX+=(targetX-cameraX)*.08;
+  c.save();c.clearRect(0,0,canvas.width,canvas.height);c.translate(-cameraX,-cameraTop);
+  if(impactTime>0&&!reduceMotion)c.translate(Math.sin(impactTime*170)*4,Math.cos(impactTime*130)*2);
+  c.drawImage(background,0,0,WIDTH,590);
   drawWeather();
   if(game.hero.moveTarget!==null){oval(game.hero.moveTarget,535,19,6,'#9edbd9aa','#497d76');line([[game.hero.moveTarget,521],[game.hero.moveTarget,532]],'#497d76',2);}
   for (const enemy of game.monsters) {
     if (enemy.pauseTime > 0) {label(enemy.slipTime > 0 ? '滑倒啦！' : game.hero.id==='ruebe'?'定住啦！':'等等嘛～',enemy.x,300,17,'#7958a1');if(game.hero.id==='ruebe')oval(enemy.x,435,48,65,'#c4dcad44','#6e9c7a');}
     if (enemy.slowTime > 0) { oval(enemy.x,510,43,8,'#b6e29d88','#70945f');label('黏住啦',enemy.x,330,15,'#537b4c'); }
     if (enemy.charge > 0) {
+      if(enemy.id==='xingxing'){
+        label({meteor:'流星雨 · 躲开红圈',stone:'石化凝视 · 离开光圈',claw:'伸长利爪 · 远离红线',fly:'飞行突袭 · 离开云影'}[enemy.spell],enemy.x,270,16,'#ae3039');
+        if(enemy.spell==='claw'){const dir=Math.sign(enemy.targetX-enemy.x)||-1;line([[enemy.x,447],[enemy.x+dir*340,447]],'#e84d7266',20);}
+        else for(const offset of enemy.spell==='meteor'?[-110,0,110]:[0])oval(Math.max(35,Math.min(WIDTH-35,enemy.targetX+offset)),510,enemy.spell==='meteor'?32:65,12,'#e84d7244','#ae3039');
+        continue;
+      }
       if(enemy.id==='wukong'){
         const names={fly:'飞天 · 离开云影',burrow:'遁地 · 离开地裂',transform:'七十二变 · 保持距离',staff:'金箍棒 · 躲开横扫'};
         label(names[enemy.spell],enemy.x,280,16,'#9e5a29');
@@ -1175,18 +1379,45 @@ function draw() {
       const bug = ENEMIES[enemy.id].shotKind === 'bug', sourceY = bug ? 337 : 360;
       c.save(); c.setLineDash([10,8]); line([[enemy.x,sourceY],[enemy.targetX,447]], '#c73e40', 3); c.restore();
       oval(enemy.targetX, 505, 45, 10, '#e8595933', '#c73e40');
-      label(bug ? '小虫蓄力 · 快躲开！' : '光弹蓄力 · 快躲开！', enemy.x, 315, 17, '#ae3039');
+      label((enemy.skillName||'蓄力')+' · 注意躲避',enemy.x,260,16,'#ae3039');
       if(!bug)oval(enemy.x,360,13+Math.sin(game.time*22)*4,13,'#f5c789','#bd4248');
     }
   }
-  for (const enemy of game.monsters) monster(enemy, game.time, game.hero.x);
+  for(const enemy of game.monsters){
+    if(enemy.id==='baltan'&&(enemy.spell==='clone'&&enemy.charge>0||enemy.skillEffectTime>0)){c.save();c.globalAlpha=.25;for(const offset of [-75,75])monster({...enemy,x:enemy.x+offset,hp:undefined},game.time,game.hero.x);c.restore();}
+    monster(enemy,game.time,game.hero.x);
+    if(enemy.shieldTime>0)oval(enemy.x,425,65,95,'#88d8f033',enemy.skillColor||'#c9df91');
+    if(enemy.skillEffectTime>0&&enemy.id!=='wukong')oval(enemy.x,425,70,100,'#b5a0eb33',enemy.skillColor||'#bb91ef');
+  }
   for(const enemy of game.monsters)if(enemy.id==='wukong'){
     if(enemy.flightTime>0||enemy.burrowTime>0){oval(enemy.targetX,510,enemy.flightTime>0?85:75,13,'#e7b26344','#b57945');label(enemy.flightTime>0?'腾云驾雾':'遁地突袭',enemy.x,270,16,'#945a35');}
     if(enemy.formTime>0)label('七十二变 · '+{tiger:'灵虎',eagle:'雄鹰',ape:'巨猿'}[enemy.form],enemy.x,270,16,'#945a35');
   }
-  hero(game.hero, game.time);
+  if(game.status!=='lost')hero(game.hero, game.time);
+  if(game.hero.domainTime>0){oval(550,440,510,160,'#9e7bd322','#bf9be3');label('美塔领域',550,90,20,'#8963a3');}
+  if(game.hero.wingTime>0)oval(game.hero.x,400-game.hero.jumpHeight,65,120,'#b0eaff33',game.hero.skillColor);
+  if(game.hero.stoneTime>0){oval(game.hero.x,425,48,85,'#7f8899aa','#454f63');label('石化 '+game.hero.stoneTime.toFixed(1)+'秒',game.hero.x,305,17,'#485367');}
+  if(game.hero.mirrorTime>0){oval(game.hero.x,425,65,94,'#73dded33','#5af1f5');label('反弹护盾',game.hero.x,305,16,'#146f83');}
+  for(const zone of game.zones){oval(zone.x,505,zone.radius,16,'#53bdff44','#277fb9');label('轨道锁定 '+zone.delay.toFixed(1),zone.x,295,16,'#277fb9');}
+  if(['won','lost'].includes(game.status)){
+    const loser=game.status==='won'?game.defeated:game.hero;
+    if(loser&&endingTime<1.4){
+      c.save();c.translate(loser.x,510);c.rotate((game.status==='won'?-1:1)*Math.min(1,endingTime/0.55)*Math.PI/2);c.translate(-loser.x,-512);
+      c.globalAlpha=Math.max(0,1-Math.max(0,endingTime-0.9)*2);
+      if(game.status==='won')monster({...loser,hp:undefined,flightTime:0},game.time,game.hero.x);else hero({...loser,invincible:0,jumpHeight:0,crouching:false},game.time);
+      c.restore();
+    }
+    if(loser&&endingTime>0.6&&endingTime<2){
+      c.save();c.globalAlpha=Math.min(1,(2-endingTime)*1.4);
+      const radius=reduceMotion?45:25+(endingTime-0.6)*105;
+      for(let i=0;i<16;i++){const angle=i*Math.PI/8;oval(loser.x+Math.cos(angle)*radius,480+Math.sin(angle)*radius*.5,5,5,i%2?'#ffe485':'#a6edff');}
+      c.restore();
+    }
+    label((game.status==='won'?heroNames[selectedHero]:ENEMIES[selectedEnemy].name)+' WIN',cameraX+canvas.width/2,220,42,'#9d3e21');
+  }
   if(game.hero.slowTime>0){oval(game.hero.x,370,38,8,'#e9ca7044','#b58a39');label('紧箍咒 · 减速',game.hero.x,322,16,'#9c6e33');}
   for (const shot of game.shots) {
+    if(['beam','blade','lightning'].includes(shot.kind)){drawSkillShot(shot);continue;}
     if(shot.kind==='headmark'||shot.kind==='headwave'){
       c.save();c.translate(shot.x,shot.y);c.scale(shot.dir,1);
       line([[-35,0],[-10,0]],shot.kind==='headmark'?'#c3ecfa':'#f4d98f',6);
@@ -1205,6 +1436,11 @@ function draw() {
     line([[shot.x - shot.dir * 44, 447], [shot.x + shot.dir * 12, 447]], '#ffffdb', 6);
   }
   for (const shot of game.enemyShots) {
+    if(['beam','blade','clone','slow'].includes(shot.kind)){drawSkillShot({...shot,dir:shot.vx<0?-1:1});continue;}
+    if(['swipe','ground'].includes(shot.kind)){oval(shot.x,shot.y,shot.radius,25,shot.color+'66',shot.color);continue;}
+    if(shot.kind==='meteor'){line([[shot.x-12,shot.y-65],[shot.x,shot.y]],'#fa864e',12);oval(shot.x,shot.y,18,18,'#ffdc83','#ae3039');continue;}
+    if(shot.kind==='stone'){oval(shot.x,430,65,80,'#a69db366','#685879');continue;}
+    if(shot.kind==='claw'){for(const dy of [-15,0,15])line([[shot.x-170,447+dy],[shot.x+170,447+dy]],'#b52a4c',5);continue;}
     if(shot.kind==='cloudstrike'){line([[shot.x,250],[shot.x,490]],'#d8ae51',12);oval(shot.x,505,85,15,'#f1d17f77','#c18c45');continue;}
     if(shot.kind==='eruption'){for(const x of [-55,-25,10,45])poly([[shot.x+x,510],[shot.x+x+12,460+Math.abs(x)/2],[shot.x+x+27,510]],'#bd9a65',ink);continue;}
     if(shot.kind==='staff'){line([[shot.x-115,447],[shot.x+115,447]],'#efc764aa',13);continue;}
@@ -1216,6 +1452,18 @@ function draw() {
     oval(shot.x,shot.y,14,14,'#d14d69','#7d2e4f'); oval(shot.x,shot.y,7,7,'#ffe5a1');
   }
   for (const spark of game.sparks) {
+    if(['cast','melee','burst','heal'].includes(spark.kind)){
+      const color=spark.color||'#9bdcf9',y=spark.y||425;c.save();c.globalAlpha=Math.min(1,spark.life*3);
+      if(spark.kind==='cast')label(spark.name,spark.x,y-70,17,color);
+      else if(spark.kind==='melee'){c.strokeStyle=color;c.lineWidth=9;c.beginPath();c.arc(spark.x,y,65,-1.5,1.4);c.stroke();}
+      else {oval(spark.x,y,spark.kind==='burst'?spark.radius*(1-spark.life):55,65,color+'44',color);if(spark.kind==='heal')label('+2',spark.x,y-70,25,'#328b75');}
+      c.restore();continue;
+    }
+    if(['gravity','time','reflect','orbital'].includes(spark.kind)){
+      if(spark.kind==='orbital'){line([[spark.x,80],[spark.x,500]],'#8ce8ff99',65);line([[spark.x,80],[spark.x,500]],'#fff7cd',15);}
+      else {oval(spark.x,425,spark.kind==='time'?220:90,95,'#6656ce44','#81e8ff');label({gravity:'黑洞牵引',time:'时停领域',reflect:'反弹！'}[spark.kind],spark.x,330,20,'#28549a');}
+      continue;
+    }
     if(spark.kind==='lightning'){line([[spark.x+13,200],[spark.x-16,298],[spark.x+12,290],[spark.x-12,390],[spark.x+10,381],[spark.x,485]],'#f9e6a3',12);line([[spark.x+13,200],[spark.x-16,298],[spark.x+12,290],[spark.x-12,390],[spark.x+10,381],[spark.x,485]],'#8ebed6',4);continue;}
     if(spark.kind==='blink'){oval(spark.x,435,29,75,'#b4deec44','#add9e5');continue;}
     const size = spark.defeated ? 32 : 18;
@@ -1228,25 +1476,37 @@ function draw() {
     if (spark.defeated) label('击退！', spark.x, 405 - (0.4 - spark.life) * 35, 19, '#fffbe7');
     c.restore();
   }
+  if(paused&&introTime===0){box(cameraX+canvas.width/2-185,235,370,100,'#fff9ebee',15,ink);label('已暂停 · 点击继续',cameraX+canvas.width/2,294,26);}
+  c.restore();
 }
 let previous = performance.now();
 function frame(now) {
-  const dt = Math.min((now - previous) / 1000, 0.05); previous = now;
-  if (!document.hidden && game.status === 'playing') {
+  const elapsed=Math.min((now-previous)/1000,1),dt=Math.min(elapsed,.05);previous=now;
+  if(!document.hidden&&!paused){
+    impactTime=Math.max(0,impactTime-elapsed);hitFreeze=Math.max(0,hitFreeze-elapsed);
+    if(introTime>0){const before=introTime;introTime=Math.max(0,introTime-elapsed);if(before>0.8&&introTime<=.8){intro.dataset.phase='fight';document.querySelector('#round-call').textContent='FIGHT!';voice.play('fight');}if(introTime===0){intro.hidden=true;clearInput();}}
+  }
+  if (!document.hidden && !paused && introTime===0 && hitFreeze===0 && game.status === 'playing') {
     const input = {};
     for (const key of keys) input[keyActions[key]] = true;
     for (const action of pointers.values()) input[action] = true;
     step(game, input, dt); updateStatus();
-    if (game.status !== 'playing') {
+  }
+  if (['won','lost'].includes(game.status) && !endingStarted) {
+      endingStarted=true;
       clearInput();
       const won = game.status === 'won';
-      audio.effect(won ? 'win' : 'lose');
+      audio.effect(won ? 'win' : 'lose');voice.play(won?'winner':'ko');
       document.querySelector('#message-icon').textContent = won ? '★' : '♡';
-      title.textContent = won ? '小卖部守住啦！' : '休息一下，再来！';
-      messageText.textContent = won ? `${ENEMIES[selectedEnemy].name}被击退了！小卖部又能安心营业啦。` : '试着保持距离，边移动边发射光线，再来一次！';
-      start.innerHTML = '再玩一次 <span>→</span>'; message.hidden = false;
-      start.focus({ preventScroll: true });
-    }
+      title.textContent = (won ? heroNames[selectedHero] : ENEMIES[selectedEnemy].name)+' WIN';
+      messageText.textContent = won ? `${ENEMIES[selectedEnemy].name}被击退了！小卖部又能安心营业啦。` : '留意攻击预警，移动躲避；技能冷却结束后再出招，试一次！';
+      if(mode==='campaign'){messageText.textContent=won?(run.stage===STAGES.length-1?'全关通关！小卖部守护成功。':`第 ${run.stage+1} 关完成！恢复 2 点能量，下一关：${ENEMIES[STAGES[run.stage+1]].name}`):'挑战失败。重试本关会恢复全部能量。';if(won&&run.stage===STAGES.length-1)title.textContent='全关制霸 · YOU WIN';}
+      start.innerHTML = (mode==='campaign'?(won?(run.stage===STAGES.length-1?'重新闯关':'下一关'):'重试本关'):'再玩一次')+' <span>→</span>'; message.hidden = true;endingTime=0;
+      game.shots=[];game.enemyShots=[];game.zones=[];game.sparks=[];
+  }
+  if(!document.hidden&&['won','lost'].includes(game.status)){
+    endingTime+=elapsed;
+    if(endingTime>=2&&message.hidden){message.hidden=false;start.focus({preventScroll:true});announcement.textContent=title.textContent+'。'+messageText.textContent;}
   }
   draw(); requestAnimationFrame(frame);
 }
